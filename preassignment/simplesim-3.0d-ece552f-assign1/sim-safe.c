@@ -77,16 +77,17 @@ static counter_t sim_num_lduh = 0;
 /* ECE552 Assignment 1 - STATS COUNTERS - BEGIN */
 static counter_t sim_num_RAW_hazard_q1;
 static counter_t sim_num_RAW_hazard_q2;
-static counter_t sim_num_cycle_counter;
+/* ECE552 Assignment 1 - STATS COUNTERS - END */
+/* ECE552 Assignment 1 - BEGIN CODE */
 static counter_t sim_num_cycle_counter_q1;
+static counter_t sim_num_cycle_counter_q2;
 static counter_t sim_num_one_stall_q1;
 static counter_t sim_num_two_stall_q1;
 static counter_t sim_num_one_stall_q2;
 static counter_t sim_num_two_stall_q2;
 static counter_t reg_ready_q1[MD_TOTAL_REGS];
 static counter_t reg_ready_q2[MD_TOTAL_REGS];
-/* ECE552 Assignment 1 - STATS COUNTERS - END */
-
+/* ECE552 Assignment 1 - END CODE */
 /*
  * This file implements a functional simulator.  This functional simulator is
  * the simplest, most user-friendly simulator in the simplescalar tool set.
@@ -175,9 +176,9 @@ sim_reg_stats(struct stat_sdb_t *sdb)
            "total number of two-cycle stall (q2)",
            &sim_num_two_stall_q2, sim_num_two_stall_q2, NULL);  
 
-  stat_reg_counter(sdb, "sim_num_cycle_counter",
+  stat_reg_counter(sdb, "sim_num_cycle_counter_q2",
            "total number of cycles (q2)",
-           &sim_num_cycle_counter, sim_num_cycle_counter, NULL);
+           &sim_num_cycle_counter_q2, sim_num_cycle_counter_q2, NULL);
  
   stat_reg_counter(sdb, "sim_num_cycle_counter_q1",
            "total number of cycles (q1)",
@@ -186,6 +187,7 @@ sim_reg_stats(struct stat_sdb_t *sdb)
   stat_reg_formula(sdb, "CPI_from_RAW_hazard_q1",
 		   "CPI from RAW hazard (q1)",
 		   "1 + (sim_num_one_stall_q1 + 2*sim_num_two_stall_q1) / sim_num_insn", NULL);
+		   
   stat_reg_formula(sdb, "CPI_from_RAW_hazard_q2",
 		   "CPI from RAW hazard (q2)",
 		   "1 + (sim_num_one_stall_q2 + 2*sim_num_two_stall_q2) / sim_num_insn", NULL);
@@ -400,8 +402,11 @@ sim_main(void)
 
       /* keep an instruction count */
       sim_num_insn++;
-      sim_num_cycle_counter++;
+      
+   	  /* ECE552 Assignment 1 - BEGIN CODE*/    
       sim_num_cycle_counter_q1++;
+      sim_num_cycle_counter_q2++;
+      /* ECE552 Assignment 1 - END CODE*/
 
       /* set default reference address and access mode */
       addr = 0; is_write = FALSE;
@@ -475,11 +480,8 @@ sim_main(void)
     int difference = -1;
  	for (i = 0; i < 3; i++) {
  	    if (r_in[i] != DNA && reg_ready_q1 [r_in [i]] > sim_num_cycle_counter_q1) {
-     	 	//if ((i == 0) && (MD_OP_FLAGS(op) & F_MEM) && (MD_OP_FLAGS(op) & F_STORE)) 
-			//   continue;
      	    if (reg_ready_q1 [r_in [i]] - sim_num_cycle_counter_q1 > difference) {
      	        difference = reg_ready_q1 [r_in [i]] - sim_num_cycle_counter_q1;
-     	        //reg_ready_q1[r_in[i]] -= 1;
      	    }
      	}
  	}
@@ -507,40 +509,38 @@ sim_main(void)
     int difference = -1;
     int i;
  	for (i = 0; i < 3; i++) {
-		if (r_in[i] != DNA && reg_ready_q2 [r_in [i]] > sim_num_cycle_counter) {
+		if (r_in[i] != DNA && reg_ready_q2 [r_in [i]] > sim_num_cycle_counter_q2) {
 			if ((i == 0) && (MD_OP_FLAGS(op) & F_MEM) &&
 				(MD_OP_FLAGS(op) & F_STORE)) {
 				continue;
 			}
-            if (reg_ready_q2 [r_in [i]] - sim_num_cycle_counter > difference) {
-                difference = reg_ready_q2 [r_in [i]] - sim_num_cycle_counter;
-                //reg_ready_q2 [r_in [i]] = sim_num_cycle_counter ;
+            if (reg_ready_q2 [r_in [i]] - sim_num_cycle_counter_q2 > difference) {
+                difference = reg_ready_q2 [r_in [i]] - sim_num_cycle_counter_q2;
             }
-			//break;
 		}
 	}
 	
     if (difference == 1) {
         sim_num_RAW_hazard_q2 ++;
         sim_num_one_stall_q2 ++;
-        sim_num_cycle_counter ++;
+        sim_num_cycle_counter_q2 ++;
     } else if (difference == 2) {
         sim_num_RAW_hazard_q2 ++;
         sim_num_two_stall_q2 += 1;
-        sim_num_cycle_counter += 2;
+        sim_num_cycle_counter_q2 += 2;
     }
     
 	}
 	if ((MD_OP_FLAGS(op) & F_MEM) && (MD_OP_FLAGS(op) & F_LOAD)) {
 	   if (r_out[0] != DNA)
-	       reg_ready_q2[r_out[0]] = sim_num_cycle_counter + 3;
+	       reg_ready_q2[r_out[0]] = sim_num_cycle_counter_q2 + 3;
 	   if (r_out[1] != DNA)
-	       reg_ready_q2[r_out[1]] = sim_num_cycle_counter + 3;
+	       reg_ready_q2[r_out[1]] = sim_num_cycle_counter_q2 + 3;
 	} else {
 	   if (r_out[0] != DNA)
-	       reg_ready_q2[r_out[0]] = sim_num_cycle_counter + 2;
+	       reg_ready_q2[r_out[0]] = sim_num_cycle_counter_q2 + 2;
 	   if (r_out[1] != DNA)
-	       reg_ready_q2[r_out[1]] = sim_num_cycle_counter + 2;
+	       reg_ready_q2[r_out[1]] = sim_num_cycle_counter_q2 + 2;
     }   
 	/* ECE552 Assignment 1 - END CODE*/
 	
