@@ -100,16 +100,27 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 	privateHistoryTable_2level[bht_index] = privateHistoryTable_2level[bht_index] << 1 | resolveDir;
 }
 
-/////////////////////////////////////////////////////////////
-// openend
-/////////////////////////////////////////////////////////////
+#define NUM_OE_PREDICTOR_TABLES 8
+#define NUM_ENTRIES_OE_PREDICTOR_TABLE 2048
+#define OE_PREDICTOR_TABLES_INDEX_WIDTH 11  //2^11 = 2048
+
+#define FOUR_BIT_MASK 0xF  //COUNTER 'char'
+#define SIX_BIT_MASK 0x3F
+#define NINE_BIT_MASK 0XFF8
+//unsigned long long int g_bhr [2]; 
+std::vector<bool> phr(16);
+std::vector<bool> g_bhr(128);
+std::vector<std::vector <char>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <char>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
 
 void InitPredictor_openend() {
 
 }
 
 bool GetPrediction_openend(UINT32 PC) {
+//access every table and get the value of counter
+//sum up the values and return the prediction result
 
+  for 
   return TAKEN;
 }
 
