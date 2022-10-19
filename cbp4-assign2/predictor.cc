@@ -17,6 +17,8 @@
 #define EIGHT_BIT_MASK 0XFF
 #define NINE_BIT_MASK 0XFF8
 #define SIXTEEN_BIT_MASK 0xFFFF
+#define THIRTYTWO_BIT_MASK 0XFFFFFFFF
+#define SIXTYFOUR_BIT_MASK 0XFFFFFFFFFFFFFFFF 
 
 
 #define INDEX_MASK 0x3F
@@ -157,7 +159,7 @@ UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 // 00000011100010
 
 // for any number: find groups of 8 bits to call Compress_EightBitToOneBit
-UINT32 Find_NBitToCompress(UINT32 history_bits, UINT32 num_bits_to_compress){
+UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_compress){
 	UINT32 group_size;
 	UINT32 res = 0;
 	switch(num_bits_to_compress){
@@ -171,12 +173,12 @@ UINT32 Find_NBitToCompress(UINT32 history_bits, UINT32 num_bits_to_compress){
 			group_size = 8;
 			break;
 		default:
+			//cout << "+++++++++++++group size: " << group_size << endl;
 			group_size = 1000;
 	}
+	
 
-	// groups = [0...3]
 	for(int i = 0; i < 8; i++){
-		//
 		res = (res << 1)| Compress_NBitToOneBit( history_bits >> (i * group_size) , group_size);
 	}
 	return res;
@@ -201,13 +203,13 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16) << 3 )| ((PC >> 2) & THREE_BIT_MASK);
 			
 		case 5:
-			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 32) << 3)| ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3)| ((PC >> 2) & THREE_BIT_MASK);
 		
 		case 6:
-			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 32) << 3) | ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3) | ((PC >> 2) & THREE_BIT_MASK);
 			
 		case 7:
-			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 64) << 3) | ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 64) & SIXTYFOUR_BIT_MASK, 64) << 3) | ((PC >> 2) & THREE_BIT_MASK);
 
 		default:
 			return PC & ELEVEN_BIT_MASK;
@@ -255,7 +257,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		}
 	}
 
-	bool highestBit = g_bhr_bottom & (TOP_BIT_MASK >> 63);
+	bool highestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
 	g_bhr_top = g_bhr_top << 1 | highestBit;
 	g_bhr_bottom = g_bhr_bottom << 1 | predDir;
 }
