@@ -129,7 +129,10 @@ std::vector<bool> phr(16);
 
 // 64 bit
 unsigned long long g_bhr_top;
+unsigned long long g_bhr_middle;
 unsigned long long g_bhr_bottom;
+char threshold_counter;
+
 std::vector<std::vector<char>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <char>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
 
 void InitPredictor_openend() {
@@ -148,9 +151,10 @@ void print_binary(UINT32 PC){
 // compress any number with 8 bits to 1 bit
 UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 	// i: current set of 8
-	UINT32 res = 0;
+	//print_binary(history_bits);
+	UINT32 res = 0b0;
 	for(UINT32 i = 0; i < n; i++){
-		res ^= (history_bits >> i);
+		res = res ^ ((history_bits >> i) & 0x1);
 	}
 	return res;
 }
@@ -200,16 +204,16 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (PC & ELEVEN_BIT_MASK) ^ (g_bhr_bottom & EIGHT_BIT_MASK);
 		
 		case 4:
-			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16) << 3 )| ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16) << 3 )| ((PC >> 6) & THREE_BIT_MASK);
 			
 		case 5:
-			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3)| ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3)| ((PC >> 6) & THREE_BIT_MASK);
 		
 		case 6:
-			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3) | ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3) | ((PC >> 6) & THREE_BIT_MASK);
 			
 		case 7:
-			return (Find_NBitToCompress((g_bhr_bottom >> 64) & SIXTYFOUR_BIT_MASK, 64) << 3) | ((PC >> 2) & THREE_BIT_MASK);
+			return (Find_NBitToCompress((g_bhr_bottom >> 64) & SIXTYFOUR_BIT_MASK, 64) << 3) | ((PC >> 6) & THREE_BIT_MASK);
 
 		default:
 			return PC & ELEVEN_BIT_MASK;
@@ -220,25 +224,28 @@ bool GetPrediction_openend(UINT32 PC) {
 //access every table and get the value of counter
 //sum up the values and return the prediction result
 
-	UINT32 sum = 0;
+	INT32 sum = 0;
 	// TODO: define INDEX_MASK and num bits to shift later
 	
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
-		cout << "i: " << i << endl;
-		cout << "PC: ";
-		print_binary(PC);
+		//cout << "i: " << i << endl;
+		//cout << "PC: ";
+		//print_binary(PC);
 		UINT32 index = GetPredictor_Index(PC, i);
-		cout << "index: ";
-		print_binary(index);
+		//cout << "index: ";
+		//print_binary(index);
 		if(i == 5)
 			break;
-		sum += (predictor_table[i][index] & FOUR_BIT_MASK);
+		sum += (predictor_table[i][index]);
 	} 
-
+	//cout << "sum: " << sum << endl;
 	UINT32 phr_bit = PC & PHR_MASK >> 6;
 	phr.erase(phr.begin());
 	phr.push_back(phr_bit);
-	return TAKEN;
+	if(sum >= 0)
+		return TAKEN;
+	else
+		return NOT_TAKEN;
 }
 
 
@@ -250,6 +257,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 				++predictor_table[i][index];
 		}
 	}else{
+		//cout << "NOT " << endl;
 		for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 			UINT32 index = GetPredictor_Index(PC, i);
 			if(predictor_table[i][index] != -8)
