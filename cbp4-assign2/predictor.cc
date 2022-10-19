@@ -18,7 +18,9 @@
 #define NINE_BIT_MASK 0XFF8
 #define SIXTEEN_BIT_MASK 0xFFFF
 #define THIRTYTWO_BIT_MASK 0XFFFFFFFF
+#define FOURTYEIGHT_BIT_MASK 0XFFFFFFFFFFFF
 #define SIXTYFOUR_BIT_MASK 0XFFFFFFFFFFFFFFFF 
+
 
 
 #define INDEX_MASK 0x3F
@@ -139,7 +141,7 @@ void InitPredictor_openend() {
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 		// init all to -1 very weak not taken
 		for(UINT32 j = 0; j < NUM_ENTRIES_OE_PREDICTOR_TABLE; j++){
-			predictor_table[i][j] = 0b1111;
+			predictor_table[i][j] = 0b01;
 		}	
 	} 
 }
@@ -163,31 +165,32 @@ UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 // 00000011100010
 
 // for any number: find groups of 8 bits to call Compress_EightBitToOneBit
-UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_compress){
-	UINT32 group_size;
+UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_compress, UINT32 num_bits_to_output){
+	UINT32 group_size = num_bits_to_compress/8;
 	UINT32 res = 0;
-	switch(num_bits_to_compress){
-		case 16:
-			group_size = 2;
-			break;
-		case 32:
-			group_size = 4;
-			break;
-		case 64:
-			group_size = 8;
-			break;
-		default:
-			//cout << "+++++++++++++group size: " << group_size << endl;
-			group_size = 1000;
-	}
+	// switch(num_bits_to_compress){
+	// 	case 16:
+	// 		group_size = 2;
+	// 		break;
+	// 	case 32:
+	// 		group_size = 4;
+	// 		break;
+	// 	case 40:
+	// 		group_size = 5;
+	// 	case 64:
+	// 		group_size = 8;
+	// 		break;
+	// 	default:
+	// 		//cout << "+++++++++++++group size: " << group_size << endl;
+	// 		group_size = 1000;
+	// }
 	
 
-	for(int i = 0; i < 8; i++){
+	for(int i = 0; i < num_bits_to_output; i++){
 		res = (res << 1)| Compress_NBitToOneBit( history_bits >> (i * group_size) , group_size);
 	}
 	return res;
 }
-
 
 UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 	switch(i){
@@ -195,25 +198,34 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return PC & ELEVEN_BIT_MASK;
 			
 		case 1:
-			return (PC & ELEVEN_BIT_MASK) ^ (g_bhr_bottom & TWO_BIT_MASK);
-			
+			return ((g_bhr_bottom & THREE_BIT_MASK) << 8) | (PC & EIGHT_BIT_MASK);
+
 		case 2:
-			return (PC & ELEVEN_BIT_MASK) ^ (g_bhr_bottom & FOUR_BIT_MASK);
+			return (g_bhr_bottom & 0x1F) << 6 | (PC & SIX_BIT_MASK);
+			// take 40 bits each
+			// UINT32 temp = Find_NBitToCompress(((g_bhr_middle & 0XFFFF) << 24) | (g_bhr_bottom >> 40), 40, 4);
+			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
+		
 		
 		case 3:
-			return (PC & ELEVEN_BIT_MASK) ^ (g_bhr_bottom & EIGHT_BIT_MASK);
+			return ((g_bhr_bottom & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
 		
 		case 4:
-			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16) << 3 )| ((PC >> 6) & THREE_BIT_MASK);
+			return (((g_bhr_bottom >> 5) & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
+			// take 40 bits each
+			// UINT32 temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
+			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
 			
 		case 5:
-			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3)| ((PC >> 6) & THREE_BIT_MASK);
+			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16, 8) << 3) | (PC & THREE_BIT_MASK);
 		
 		case 6:
-			return (Find_NBitToCompress((g_bhr_bottom >> 32) & THIRTYTWO_BIT_MASK, 32) << 3) | ((PC >> 6) & THREE_BIT_MASK);
+			return (Find_NBitToCompress(g_bhr_bottom & THIRTYTWO_BIT_MASK, 32, 8) << 3) | (PC & THREE_BIT_MASK);
+			// UINT32 temp = Find_NBitToCompress(g_bhr_top, 64, 4);
+			// temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
 			
 		case 7:
-			return (Find_NBitToCompress((g_bhr_bottom >> 64) & SIXTYFOUR_BIT_MASK, 64) << 3) | ((PC >> 6) & THREE_BIT_MASK);
+			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 
 		default:
 			return PC & ELEVEN_BIT_MASK;
@@ -234,15 +246,14 @@ bool GetPrediction_openend(UINT32 PC) {
 		UINT32 index = GetPredictor_Index(PC, i);
 		//cout << "index: ";
 		//print_binary(index);
-		if(i == 5)
-			break;
+		
 		sum += (predictor_table[i][index]);
 	} 
 	//cout << "sum: " << sum << endl;
 	UINT32 phr_bit = PC & PHR_MASK >> 6;
 	phr.erase(phr.begin());
 	phr.push_back(phr_bit);
-	if(sum >= 0)
+	if(sum + NUM_OE_PREDICTOR_TABLES / 2 >= 0)
 		return TAKEN;
 	else
 		return NOT_TAKEN;

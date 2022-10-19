@@ -8,8 +8,8 @@ NUM_CONDITIONAL_BR   	 :   14796021
 2bitsat: MISPRED_PER_1K_INST  	 :     24.639
 2level:  NUM_MISPREDICTIONS   	 :    1785464
 2level:  MISPRED_PER_1K_INST  	 :     11.903
-openend: NUM_MISPREDICTIONS   	 :    8901363
-openend: MISPRED_PER_1K_INST  	 :     59.342
+openend: NUM_MISPREDICTIONS   	 :    2673769
+openend: MISPRED_PER_1K_INST  	 :     17.825
 
 .......................................................................................................................................................
 
@@ -20,8 +20,8 @@ NUM_CONDITIONAL_BR   	 :   16754009
 2bitsat: MISPRED_PER_1K_INST  	 :      7.886
 2level:  NUM_MISPREDICTIONS   	 :    1071909
 2level:  MISPRED_PER_1K_INST  	 :      7.146
-openend: NUM_MISPREDICTIONS   	 :    2546935
-openend: MISPRED_PER_1K_INST  	 :     16.980
+openend: NUM_MISPREDICTIONS   	 :    1629111
+openend: MISPRED_PER_1K_INST  	 :     10.861
 
 .......................................................................................................................................................
 
@@ -32,8 +32,8 @@ NUM_CONDITIONAL_BR   	 :   25323638
 2bitsat: MISPRED_PER_1K_INST  	 :      8.166
 2level:  NUM_MISPREDICTIONS   	 :    1297677
 2level:  MISPRED_PER_1K_INST  	 :      8.651
-openend: NUM_MISPREDICTIONS   	 :   20922608
-openend: MISPRED_PER_1K_INST  	 :    139.484
+openend: NUM_MISPREDICTIONS   	 :    2380744
+openend: MISPRED_PER_1K_INST  	 :     15.872
 
 ......................................................................................................................................................
 
@@ -44,8 +44,8 @@ NUM_CONDITIONAL_BR   	 :   22628704
 2bitsat: MISPRED_PER_1K_INST  	 :     21.079
 2level:  NUM_MISPREDICTIONS   	 :    2223671
 2level:  MISPRED_PER_1K_INST  	 :     14.824
-openend: NUM_MISPREDICTIONS   	 :   14215555
-openend: MISPRED_PER_1K_INST  	 :     94.770
+openend: NUM_MISPREDICTIONS   	 :    1797737
+openend: MISPRED_PER_1K_INST  	 :     11.985
 
 .......................................................................................................................................................
 
@@ -56,8 +56,8 @@ NUM_CONDITIONAL_BR   	 :    9409564
 2bitsat: MISPRED_PER_1K_INST  	 :      9.088
 2level:  NUM_MISPREDICTIONS   	 :    1122586
 2level:  MISPRED_PER_1K_INST  	 :      7.484
-openend: NUM_MISPREDICTIONS   	 :    5668412
-openend: MISPRED_PER_1K_INST  	 :     37.789
+openend: NUM_MISPREDICTIONS   	 :    1332622
+openend: MISPRED_PER_1K_INST  	 :      8.884
 
 .......................................................................................................................................................
 
@@ -68,8 +68,8 @@ NUM_CONDITIONAL_BR   	 :   19679814
 2bitsat: MISPRED_PER_1K_INST  	 :     13.567
 2level:  NUM_MISPREDICTIONS   	 :    2230774
 2level:  MISPRED_PER_1K_INST  	 :     14.872
-openend: NUM_MISPREDICTIONS   	 :    4999476
-openend: MISPRED_PER_1K_INST  	 :     33.330
+openend: NUM_MISPREDICTIONS   	 :    1828579
+openend: MISPRED_PER_1K_INST  	 :     12.191
 
 .......................................................................................................................................................
 
@@ -80,8 +80,8 @@ NUM_CONDITIONAL_BR   	 :   31520616
 2bitsat: MISPRED_PER_1K_INST  	 :     24.387
 2level:  NUM_MISPREDICTIONS   	 :    2024172
 2level:  MISPRED_PER_1K_INST  	 :     13.494
-openend: NUM_MISPREDICTIONS   	 :   14745293
-openend: MISPRED_PER_1K_INST  	 :     98.302
+openend: NUM_MISPREDICTIONS   	 :    1847980
+openend: MISPRED_PER_1K_INST  	 :     12.320
 
 ......................................................................................................................................................
 
@@ -92,6 +92,6 @@ NUM_CONDITIONAL_BR   	 :   20449090
 2bitsat: MISPRED_PER_1K_INST  	 :      7.107
 2level:  NUM_MISPREDICTIONS   	 :    1022869
 2level:  MISPRED_PER_1K_INST  	 :      6.819
-openend: NUM_MISPREDICTIONS   	 :    6468342
-openend: MISPRED_PER_1K_INST  	 :     43.122
+openend: NUM_MISPREDICTIONS   	 :    2372508
+openend: MISPRED_PER_1K_INST  	 :     15.817
 
