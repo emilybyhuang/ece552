@@ -113,7 +113,7 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 	privateHistoryTable_2level[bht_index] = privateHistoryTable_2level[bht_index] << 1 | resolveDir;
 }
 
-#define NUM_OE_PREDICTOR_TABLES 11
+#define NUM_OE_PREDICTOR_TABLES 8
 #define NUM_ENTRIES_OE_PREDICTOR_TABLE 2048
 
 #define OE_PREDICTOR_TABLES_INDEX_WIDTH 11  //2^11 = 2048
@@ -245,25 +245,25 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 		
 		case 8:
-			/*
+			
 			parameter1 = (g_bhr_bottom & 0XFFFFFFFFFF) % 2039;
 			parameter2 = ((g_bhr_middle & 0XFFFF) << 24 | (g_bhr_bottom >> 40)) % 2039;
 			// temp = Find_NBitToCompress(parameter, 40, 4);set_of_indices
 			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
 			return (parameter1 ^ parameter2) ^ (PC & ELEVEN_BIT_MASK) & ELEVEN_BIT_MASK;
-			*/
+			
 		case 9:
-			/*
+			
 			temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
 			temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
 			return temp;
-			*/
+			
 		case 10:
-			/*
+			
 			temp = Find_NBitToCompress(g_bhr_top, 64, 4);
 			//temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
 			return temp & ELEVEN_BIT_MASK;;
-			*/
+			
 		default:
 			return PC & ELEVEN_BIT_MASK;
 	}
@@ -373,11 +373,17 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	}
 	
 
-	bool bottomHighestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
-	bool middleHighestBit = (g_bhr_middle & TOP_BIT_MASK) >> 63;
-	g_bhr_bottom = (g_bhr_bottom << 1) | predDir;
-	g_bhr_middle = (g_bhr_middle << 1)| bottomHighestBit;
-	g_bhr_top = (g_bhr_top << 1) | middleHighestBit;
+	unsigned long long bottomHighestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
+	unsigned long long middleHighestBit = (g_bhr_middle & TOP_BIT_MASK) >> 63;
+	if(resolveDir == TAKEN){
+		g_bhr_bottom = (g_bhr_bottom << 1) | ((unsigned long long) 1);
+		g_bhr_middle = (g_bhr_middle << 1)| bottomHighestBit;
+		g_bhr_top = (g_bhr_top << 1) | middleHighestBit;
+	}else{
+		g_bhr_bottom = (g_bhr_bottom << 1) | ((unsigned long long) 0);
+		g_bhr_middle = (g_bhr_middle << 1)| bottomHighestBit;
+		g_bhr_top = (g_bhr_top << 1) | middleHighestBit;
+	}
 }
 
 void print_set(){
