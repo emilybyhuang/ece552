@@ -127,7 +127,7 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 
 
 //unsigned long long int g_bhr [2]; 
-std::vector<bool> phr(16);
+UINT32 phr;
 // std::vector<bool> g_bhr(128);
 
 // 64 bit
@@ -161,14 +161,9 @@ void InitPredictor_openend() {
 	g_use_long_histories = false;
 }
 
-void print_binary(UINT32 PC){
-	std::cout << "a = " << std::bitset<64>(PC)  << std::endl;
-}
-
 // compress any number with 8 bits to 1 bit
 UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 	// i: current set of 8
-	//print_binary(history_bits);
 	UINT32 res = 0b0;
 	for(UINT32 i = 0; i < n; i++){
 		res = res ^ ((history_bits >> i) & 0x1);
@@ -201,7 +196,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & 0X11);
 			
 		case 1:
-			return (g_bhr_bottom & 0X3) ^ (PC & ELEVEN_BIT_MASK);
+			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
 
 		case 2:
 			if(!g_use_long_histories){
@@ -268,9 +263,11 @@ bool GetPrediction_openend(UINT32 PC) {
 	
 	
 	//cout << "sum: " << sum << endl;
-	UINT32 phr_bit = PC & PHR_MASK >> 6;
-	phr.erase(phr.begin());
-	phr.push_back(phr_bit);
+	UINT32 phr_bit = (PC & PHR_MASK) >> 6;
+	phr = phr << 1;
+	phr = phr | phr_bit;
+	// phr.erase(phr.begin());
+	// phr.push_back(phr_bit);
 	if(g_sum_of_table_entries + NUM_OE_PREDICTOR_TABLES / 2 >= 0)
 		return TAKEN;
 	else
@@ -283,14 +280,14 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		if(resolveDir == TAKEN){
 			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 				UINT32 index = GetPredictor_Index(PC, i);
-				if(predictor_table[i][index] != 7)
+				if((i >= 2 && predictor_table[i][index] != 7) || (i < 2 && predictor_table[i][index] != 15))
 					++predictor_table[i][index];
 			}
 		}else{
 			//cout << "NOT " << endl;
 			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 				UINT32 index = GetPredictor_Index(PC, i);
-				if(predictor_table[i][index] != -8)
+				if((i >= 2 && predictor_table[i][index] != -8) || (i < 2 && predictor_table[i][index] != -16))
 					--predictor_table[i][index];
 			}
 		}
