@@ -201,7 +201,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & 0X11);
 			
 		case 1:
-			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
+			return (g_bhr_bottom & 0X3) ^ (PC & ELEVEN_BIT_MASK);
 
 		case 2:
 			if(!g_use_long_histories){
@@ -238,6 +238,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 				temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
 				return temp;
 			}
+
 		case 7:
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 
@@ -321,22 +322,22 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	if(predDir != resolveDir){
 		g_threshold_counter++;
 		if(g_threshold_counter == 63){
-			if(g_threshold < 16){
+			//if(g_threshold < 16){
 				g_threshold++;
 			//cout << "increment threshold: " << g_threshold << endl;
 				g_threshold_counter = 0;
-			}
+			//}
 		}
 	}
 
 	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
 		g_threshold_counter--;
 		if(g_threshold_counter == -64){
-			if(g_threshold > 0){
+			//if(g_threshold > 0){
 				g_threshold--;
 			//cout << "decrement threshold: " << g_threshold << endl;
 				g_threshold_counter = 0;
-			}
+			//}
 		}
 	}
 	
