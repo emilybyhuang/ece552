@@ -5,9 +5,9 @@ make: 'predictor' is up to date.
 ..............................
 .............................
 2048
-1310
-2048
-2048
+1272
+1828
+2044
 2048
 2048
 2048
@@ -21,8 +21,8 @@ NUM_CONDITIONAL_BR   	 :   14796021
 2bitsat: MISPRED_PER_1K_INST  	 :     24.639
 2level:  NUM_MISPREDICTIONS   	 :    1785464
 2level:  MISPRED_PER_1K_INST  	 :     11.903
-openend: NUM_MISPREDICTIONS   	 :    1048991
-openend: MISPRED_PER_1K_INST  	 :      6.993
+openend: NUM_MISPREDICTIONS   	 :     895153
+openend: MISPRED_PER_1K_INST  	 :      5.968
 
 ..............................
 ..............................
@@ -30,13 +30,13 @@ openend: MISPRED_PER_1K_INST  	 :      6.993
 ..............................
 ..............................
 
-2048
-1059
-2048
-2044
-2048
-2048
-2048
+2042
+1001
+1763
+1994
+2047
+2040
+2043
 2048
 
 
@@ -47,8 +47,8 @@ NUM_CONDITIONAL_BR   	 :   16754009
 2bitsat: MISPRED_PER_1K_INST  	 :      7.886
 2level:  NUM_MISPREDICTIONS   	 :    1071909
 2level:  MISPRED_PER_1K_INST  	 :      7.146
-openend: NUM_MISPREDICTIONS   	 :     746421
-openend: MISPRED_PER_1K_INST  	 :      4.976
+openend: NUM_MISPREDICTIONS   	 :     865628
+openend: MISPRED_PER_1K_INST  	 :      5.771
 
 ..............................
 ..............................
@@ -57,9 +57,9 @@ openend: MISPRED_PER_1K_INST  	 :      4.976
 ..............................
 
 2048
-569
-2048
-2014
+562
+1350
+1845
 2048
 2048
 2048
@@ -73,8 +73,8 @@ NUM_CONDITIONAL_BR   	 :   25323638
 2bitsat: MISPRED_PER_1K_INST  	 :      8.166
 2level:  NUM_MISPREDICTIONS   	 :    1297677
 2level:  MISPRED_PER_1K_INST  	 :      8.651
-openend: NUM_MISPREDICTIONS   	 :    1335361
-openend: MISPRED_PER_1K_INST  	 :      8.902
+openend: NUM_MISPREDICTIONS   	 :    1220872
+openend: MISPRED_PER_1K_INST  	 :      8.139
 
 ..............................
 ..............................
@@ -82,8 +82,8 @@ openend: MISPRED_PER_1K_INST  	 :      8.902
 ..............................
 .............................
 2048
-1661
-2048
+1603
+1976
 2048
 2048
 2048
@@ -98,8 +98,8 @@ NUM_CONDITIONAL_BR   	 :   22628704
 2bitsat: MISPRED_PER_1K_INST  	 :     21.079
 2level:  NUM_MISPREDICTIONS   	 :    2223671
 2level:  MISPRED_PER_1K_INST  	 :     14.824
-openend: NUM_MISPREDICTIONS   	 :     931768
-openend: MISPRED_PER_1K_INST  	 :      6.212
+openend: NUM_MISPREDICTIONS   	 :     827072
+openend: MISPRED_PER_1K_INST  	 :      5.514
 
 ..............................
 ..............................
@@ -108,8 +108,8 @@ openend: MISPRED_PER_1K_INST  	 :      6.212
 ..............................
 
 2048
-803
-2048
+781
+1629
 2048
 2048
 2048
@@ -124,8 +124,8 @@ NUM_CONDITIONAL_BR   	 :    9409564
 2bitsat: MISPRED_PER_1K_INST  	 :      9.088
 2level:  NUM_MISPREDICTIONS   	 :    1122586
 2level:  MISPRED_PER_1K_INST  	 :      7.484
-openend: NUM_MISPREDICTIONS   	 :    1131751
-openend: MISPRED_PER_1K_INST  	 :      7.545
+openend: NUM_MISPREDICTIONS   	 :     961444
+openend: MISPRED_PER_1K_INST  	 :      6.410
 
 ..............................
 ..............................
@@ -133,14 +133,14 @@ openend: MISPRED_PER_1K_INST  	 :      7.545
 ..............................
 ..............................
 
-1828
-824
-2048
-1795
-1988
-2000
-2037
-2046
+1747
+793
+1251
+1677
+1954
+1935
+2028
+2045
 
 
 NUM_INSTRUCTIONS     	 :  150000008
@@ -150,8 +150,8 @@ NUM_CONDITIONAL_BR   	 :   19679814
 2bitsat: MISPRED_PER_1K_INST  	 :     13.567
 2level:  NUM_MISPREDICTIONS   	 :    2230774
 2level:  MISPRED_PER_1K_INST  	 :     14.872
-openend: NUM_MISPREDICTIONS   	 :    1846769
-openend: MISPRED_PER_1K_INST  	 :     12.312
+openend: NUM_MISPREDICTIONS   	 :    1855241
+openend: MISPRED_PER_1K_INST  	 :     12.368
 
 ..............................
 ..............................
@@ -160,9 +160,9 @@ openend: MISPRED_PER_1K_INST  	 :     12.312
 ..............................
 
 2048
-469
-2048
-2036
+447
+1201
+2007
 2048
 2048
 2048
@@ -176,8 +176,8 @@ NUM_CONDITIONAL_BR   	 :   31520616
 2bitsat: MISPRED_PER_1K_INST  	 :     24.387
 2level:  NUM_MISPREDICTIONS   	 :    2024172
 2level:  MISPRED_PER_1K_INST  	 :     13.494
-openend: NUM_MISPREDICTIONS   	 :    1675807
-openend: MISPRED_PER_1K_INST  	 :     11.172
+openend: NUM_MISPREDICTIONS   	 :    1603842
+openend: MISPRED_PER_1K_INST  	 :     10.692
 
 ..............................
 ..............................
@@ -185,8 +185,8 @@ openend: MISPRED_PER_1K_INST  	 :     11.172
 ..............................
 .............................
 2048
-1675
-2048
+1677
+2014
 2048
 2048
 2048
@@ -201,6 +201,6 @@ NUM_CONDITIONAL_BR   	 :   20449090
 2bitsat: MISPRED_PER_1K_INST  	 :      7.107
 2level:  NUM_MISPREDICTIONS   	 :    1022869
 2level:  MISPRED_PER_1K_INST  	 :      6.819
-openend: NUM_MISPREDICTIONS   	 :     828144
-openend: MISPRED_PER_1K_INST  	 :      5.521
+openend: NUM_MISPREDICTIONS   	 :     825046
+openend: MISPRED_PER_1K_INST  	 :      5.500
 
