@@ -155,7 +155,7 @@ void InitPredictor_openend() {
 	g_threshold = 8;
 	g_threshold_counter = 0;
 	g_sum_of_table_entries = 0;
-	g_use_long_histories = true;
+	g_use_long_histories = false;
 }
 
 void print_binary(UINT32 PC){
@@ -300,7 +300,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		}
 	}
 	
-
+	/*
 	// aliasing counter update
 	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
 		UINT32 table_seven_idx = GetPredictor_Index(PC, 7);
@@ -318,31 +318,35 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 			g_use_long_histories = false;
 		tag_bits[table_seven_idx/2] = PC & 0b1;
 	}
-
+	*/
 	
 	// threshold counter update
 	if(predDir != resolveDir){
 		g_threshold_counter++;
 		if(g_threshold_counter == 63){
-			if(g_threshold < 13)
+			if(g_threshold < 13){
 				g_threshold++;
 			//cout << "increment threshold: " << g_threshold << endl;
-			g_threshold_counter = 0;
+				g_threshold_counter = 0;
+			}
 		}
 	}
 
 	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
 		g_threshold_counter--;
 		if(g_threshold_counter == -64){
-			if(g_threshold > 6)
+			if(g_threshold > 6){
 				g_threshold--;
 			//cout << "decrement threshold: " << g_threshold << endl;
-			g_threshold_counter = 0;
+				g_threshold_counter = 0;
+			}
 		}
 	}
 	
 
-	bool highestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
-	g_bhr_top = g_bhr_top << 1 | highestBit;
-	g_bhr_bottom = g_bhr_bottom << 1 | predDir;
+	bool bottomHighestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
+	bool middleHighestBit = (g_bhr_middle & TOP_BIT_MASK) >> 63;
+	g_bhr_bottom = (g_bhr_bottom << 1) | predDir;
+	g_bhr_middle = (g_bhr_middle << 1)| bottomHighestBit;
+	g_bhr_top = (g_bhr_top << 1) | middleHighestBit;
 }
