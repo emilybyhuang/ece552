@@ -260,7 +260,7 @@ bool GetPrediction_openend(UINT32 PC) {
 //sum up the values and return the prediction result
 
 	// TODO: define INDEX_MASK and num bits to shift later
-	
+	g_sum_of_table_entries = 0;
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 		//cout << "i: " << i << endl;
 		//cout << "PC: ";
