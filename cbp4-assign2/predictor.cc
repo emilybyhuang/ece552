@@ -1,6 +1,7 @@
 #include "predictor.h"
 #include <vector>
 #include <bitset>
+#include <unordered_map>
 /////////////////////////////////////////////////////////////
 // 2bitsat
 /////////////////////////////////////////////////////////////
@@ -134,12 +135,14 @@ unsigned long long g_bhr_top;
 unsigned long long g_bhr_middle;
 unsigned long long g_bhr_bottom;
 // 9 bit
-UINT32 g_aliasing_counter;
+int32_t g_aliasing_counter;
 // 7 bit
-UINT32 g_threshold_counter;
+int32_t g_threshold_counter;
 UINT32 g_threshold;
 int32_t g_sum_of_table_entries;
 bool g_use_long_histories;
+
+
 
 
 std::vector<std::vector<char>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <char>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
@@ -149,7 +152,7 @@ void InitPredictor_openend() {
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 		// init all to -1 very weak not taken
 		for(UINT32 j = 0; j < NUM_ENTRIES_OE_PREDICTOR_TABLE; j++){
-			predictor_table[i][j] = 0b01;
+			predictor_table[i][j] = 0b0;
 		}	
 	} 
 	g_threshold = 8;
@@ -179,59 +182,48 @@ UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 // for any number: find groups of 8 bits to call Compress_EightBitToOneBit
 UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_compress, UINT32 num_bits_to_output){
 	UINT32 group_size = num_bits_to_compress/8;
-	UINT32 res = 0;
-	// switch(num_bits_to_compress){
-	// 	case 16:
-	// 		group_size = 2;
-	// 		break;
-	// 	case 32:
-	// 		group_size = 4;
-	// 		break;
-	// 	case 40:
-	// 		group_size = 5;
-	// 	case 64:
-	// 		group_size = 8;
-	// 		break;
-	// 	default:
-	// 		//cout << "+++++++++++++group size: " << group_size << endl;
-	// 		group_size = 1000;
-	// }
-	
+	UINT32 res = 0;	
 
-	for(int i = 0; i < num_bits_to_output; i++){
+	for(UINT32 i = 0; i < num_bits_to_output; i++){
 		res = (res << 1)| Compress_NBitToOneBit( history_bits >> (i * group_size) , group_size);
 	}
 	return res;
 }
 
+
 UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
+	UINT32 temp;
+	UINT32 parameter;
+	UINT64 parameter1, parameter2;
+
 	switch(i){
 		case 0:
-			return PC & ELEVEN_BIT_MASK;
+			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & 0X11);
 			
 		case 1:
-			return ((g_bhr_bottom & THREE_BIT_MASK) << 8) | (PC & EIGHT_BIT_MASK);
+			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
 
 		case 2:
-			if(!g_use_long_histories){
-				return (g_bhr_bottom & 0x1F) << 6 | (PC & SIX_BIT_MASK);
-			// take 40 bits each
-			}else{
-				UINT32 temp = Find_NBitToCompress(((g_bhr_middle & 0XFFFF) << 24) | (g_bhr_bottom >> 40), 40, 4);
-				temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
-				return temp;
-			}
-		
+			// if(!g_use_long_histories){
+			// 	return ((g_bhr_bottom & 0x1F) << 5 | (g_bhr_bottom & 0x1F)) ^ (PC & ELEVEN_BIT_MASK);
+			// // take 40 bits each
+			// }else{
+				parameter1 = (g_bhr_bottom & 0XFFFFFFFFFF) % 2039;
+				parameter2 = ((g_bhr_middle & 0XFFFF) << 24 | (g_bhr_bottom >> 40)) % 2039;
+				// temp = Find_NBitToCompress(parameter, 40, 4);
+				// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
+				return (parameter1 ^ parameter2) & ELEVEN_BIT_MASK;
+			//}
 		
 		case 3:
-			return ((g_bhr_bottom & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
+			return ((g_bhr_bottom & EIGHT_BIT_MASK)^(PC & ELEVEN_BIT_MASK));
 		
 		case 4:
 			if(!g_use_long_histories){
-				return (((g_bhr_bottom >> 5) & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
+				return (((g_bhr_bottom >> 2) & ELEVEN_BIT_MASK)^(PC & ELEVEN_BIT_MASK));
 			}else{
 			// take 40 bits each
-				UINT32 temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
+				temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
 				temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
 				return temp;
 			}
@@ -243,7 +235,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			if(!g_use_long_histories){
 				return (Find_NBitToCompress(g_bhr_bottom & THIRTYTWO_BIT_MASK, 32, 8) << 3) | (PC & THREE_BIT_MASK);
 			}else{
-				UINT32 temp = Find_NBitToCompress(g_bhr_top, 64, 4);
+				temp = Find_NBitToCompress(g_bhr_top, 64, 4);
 				temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
 				return temp;
 			}
@@ -254,7 +246,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return PC & ELEVEN_BIT_MASK;
 	}
 }
-
+vector<set<int>> set_of_indices(8);
 bool GetPrediction_openend(UINT32 PC) {
 //access every table and get the value of counter
 //sum up the values and return the prediction result
@@ -266,11 +258,15 @@ bool GetPrediction_openend(UINT32 PC) {
 		//cout << "PC: ";
 		//print_binary(PC);
 		UINT32 index = GetPredictor_Index(PC, i);
+		set_of_indices[i].insert(index);
 		//cout << "index: ";
 		//print_binary(index);
 		
 		g_sum_of_table_entries += (predictor_table[i][index]);
 	} 
+
+	
+	
 	//cout << "sum: " << sum << endl;
 	UINT32 phr_bit = PC & PHR_MASK >> 6;
 	phr.erase(phr.begin());
@@ -300,6 +296,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		}
 	}
 	
+	
 	/*
 	// aliasing counter update
 	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
@@ -320,11 +317,12 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	}
 	*/
 	
+
 	// threshold counter update
 	if(predDir != resolveDir){
 		g_threshold_counter++;
 		if(g_threshold_counter == 63){
-			if(g_threshold < 13){
+			if(g_threshold < 16){
 				g_threshold++;
 			//cout << "increment threshold: " << g_threshold << endl;
 				g_threshold_counter = 0;
@@ -335,7 +333,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
 		g_threshold_counter--;
 		if(g_threshold_counter == -64){
-			if(g_threshold > 6){
+			if(g_threshold > 0){
 				g_threshold--;
 			//cout << "decrement threshold: " << g_threshold << endl;
 				g_threshold_counter = 0;
@@ -349,4 +347,13 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	g_bhr_bottom = (g_bhr_bottom << 1) | predDir;
 	g_bhr_middle = (g_bhr_middle << 1)| bottomHighestBit;
 	g_bhr_top = (g_bhr_top << 1) | middleHighestBit;
+}
+
+void print_set(){
+	cout << endl;
+	//for(UINT32 i = 0; i < 8; i++){
+	for(auto s: set_of_indices){
+		cout << s.size() << endl;
+	}
+    //}
 }
