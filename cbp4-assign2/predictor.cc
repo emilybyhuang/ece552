@@ -204,16 +204,16 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
 
 		case 2:
-			// if(!g_use_long_histories){
-			// 	return ((g_bhr_bottom & 0x1F) << 5 | (g_bhr_bottom & 0x1F)) ^ (PC & ELEVEN_BIT_MASK);
-			// // take 40 bits each
-			// }else{
+			if(!g_use_long_histories){
+				return ((g_bhr_bottom & 0x1F) << 5 | (g_bhr_bottom & 0x1F)) ^ (PC & ELEVEN_BIT_MASK);
+			// take 40 bits each
+			}else{
 				parameter1 = (g_bhr_bottom & 0XFFFFFFFFFF) % 2039;
 				parameter2 = ((g_bhr_middle & 0XFFFF) << 24 | (g_bhr_bottom >> 40)) % 2039;
 				// temp = Find_NBitToCompress(parameter, 40, 4);
 				// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
-				return (parameter1 ^ parameter2) & ELEVEN_BIT_MASK;
-			//}
+				return (parameter1 ^ parameter2) ^ (PC & ELEVEN_BIT_MASK) & ELEVEN_BIT_MASK;
+			}
 		
 		case 3:
 			return ((g_bhr_bottom & EIGHT_BIT_MASK)^(PC & ELEVEN_BIT_MASK));
@@ -222,7 +222,6 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			if(!g_use_long_histories){
 				return (((g_bhr_bottom >> 2) & ELEVEN_BIT_MASK)^(PC & ELEVEN_BIT_MASK));
 			}else{
-			// take 40 bits each
 				temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
 				temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
 				return temp;
