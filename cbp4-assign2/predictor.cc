@@ -281,21 +281,23 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		if(resolveDir == TAKEN){
 			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 				UINT32 index = GetPredictor_Index(PC, i);
-				if((i >= 2 && predictor_table[i][index] != 7) || (i < 2 && predictor_table[i][index] != 15))
+				//if((i >= 2 && predictor_table[i][index] != 7) || (i < 2 && predictor_table[i][index] != 15))
+				if(predictor_table[i][index] != 15)
 					++predictor_table[i][index];
 			}
 		}else{
 			//cout << "NOT " << endl;
 			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 				UINT32 index = GetPredictor_Index(PC, i);
-				if((i >= 2 && predictor_table[i][index] != -8) || (i < 2 && predictor_table[i][index] != -16))
+				//if((i >= 2 && predictor_table[i][index] != -8) || (i < 2 && predictor_table[i][index] != -16))
+				if(predictor_table[i][index] != -16)
 					--predictor_table[i][index];
 			}
 		}
 	}
 	
 	
-
+	/*
 	// aliasing counter update
 	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) <= g_threshold)){
 		UINT32 table_seven_idx = GetPredictor_Index(PC, 7);
@@ -316,7 +318,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 			g_use_long_histories = false;
 		tag_bits[table_seven_idx/2] = PC & 0b1;
 	}
-
+	*/
 
 	// threshold counter update
 	if(predDir != resolveDir){
