@@ -95,6 +95,8 @@ int main(int argc, char* argv[]){
     //print_stats
     ///////////////////////////////////////////
 
+    print_set();
+
       printf("\n");
       printf("\nNUM_INSTRUCTIONS     \t : %10llu",   tracer->GetNumInst());
       printf("\nNUM_CONDITIONAL_BR   \t : %10llu",   tracer->GetNumCondBranch());

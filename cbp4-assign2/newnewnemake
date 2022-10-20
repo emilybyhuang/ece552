@@ -1,0 +1,3 @@
+g++ -g -o3 -Wall   -c -o predictor.o predictor.cc
+g++ -o predictor tracer.o predictor.o main.o 
+.
