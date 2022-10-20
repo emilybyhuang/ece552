@@ -133,9 +133,17 @@ std::vector<bool> phr(16);
 unsigned long long g_bhr_top;
 unsigned long long g_bhr_middle;
 unsigned long long g_bhr_bottom;
-char threshold_counter;
+// 9 bit
+UINT32 g_aliasing_counter;
+// 7 bit
+UINT32 g_threshold_counter;
+UINT32 g_threshold;
+int32_t g_sum_of_table_entries;
+bool g_use_long_histories;
+
 
 std::vector<std::vector<char>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <char>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
+std::vector<char> tag_bits(NUM_ENTRIES_OE_PREDICTOR_TABLE/2, 0);
 
 void InitPredictor_openend() {
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
@@ -144,6 +152,10 @@ void InitPredictor_openend() {
 			predictor_table[i][j] = 0b01;
 		}	
 	} 
+	g_threshold = 8;
+	g_threshold_counter = 0;
+	g_sum_of_table_entries = 0;
+	g_use_long_histories = true;
 }
 
 void print_binary(UINT32 PC){
@@ -201,29 +213,40 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return ((g_bhr_bottom & THREE_BIT_MASK) << 8) | (PC & EIGHT_BIT_MASK);
 
 		case 2:
-			return (g_bhr_bottom & 0x1F) << 6 | (PC & SIX_BIT_MASK);
+			if(!g_use_long_histories){
+				return (g_bhr_bottom & 0x1F) << 6 | (PC & SIX_BIT_MASK);
 			// take 40 bits each
-			// UINT32 temp = Find_NBitToCompress(((g_bhr_middle & 0XFFFF) << 24) | (g_bhr_bottom >> 40), 40, 4);
-			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
+			}else{
+				UINT32 temp = Find_NBitToCompress(((g_bhr_middle & 0XFFFF) << 24) | (g_bhr_bottom >> 40), 40, 4);
+				temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
+				return temp;
+			}
 		
 		
 		case 3:
 			return ((g_bhr_bottom & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
 		
 		case 4:
-			return (((g_bhr_bottom >> 5) & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
+			if(!g_use_long_histories){
+				return (((g_bhr_bottom >> 5) & EIGHT_BIT_MASK)|(PC & THREE_BIT_MASK));
+			}else{
 			// take 40 bits each
-			// UINT32 temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
-			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
+				UINT32 temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
+				temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
+				return temp;
+			}
 			
 		case 5:
 			return (Find_NBitToCompress(g_bhr_bottom & SIXTEEN_BIT_MASK, 16, 8) << 3) | (PC & THREE_BIT_MASK);
 		
 		case 6:
-			return (Find_NBitToCompress(g_bhr_bottom & THIRTYTWO_BIT_MASK, 32, 8) << 3) | (PC & THREE_BIT_MASK);
-			// UINT32 temp = Find_NBitToCompress(g_bhr_top, 64, 4);
-			// temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
-			
+			if(!g_use_long_histories){
+				return (Find_NBitToCompress(g_bhr_bottom & THIRTYTWO_BIT_MASK, 32, 8) << 3) | (PC & THREE_BIT_MASK);
+			}else{
+				UINT32 temp = Find_NBitToCompress(g_bhr_top, 64, 4);
+				temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
+				return temp;
+			}
 		case 7:
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 
@@ -236,7 +259,6 @@ bool GetPrediction_openend(UINT32 PC) {
 //access every table and get the value of counter
 //sum up the values and return the prediction result
 
-	INT32 sum = 0;
 	// TODO: define INDEX_MASK and num bits to shift later
 	
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
@@ -247,13 +269,13 @@ bool GetPrediction_openend(UINT32 PC) {
 		//cout << "index: ";
 		//print_binary(index);
 		
-		sum += (predictor_table[i][index]);
+		g_sum_of_table_entries += (predictor_table[i][index]);
 	} 
 	//cout << "sum: " << sum << endl;
 	UINT32 phr_bit = PC & PHR_MASK >> 6;
 	phr.erase(phr.begin());
 	phr.push_back(phr_bit);
-	if(sum + NUM_OE_PREDICTOR_TABLES / 2 >= 0)
+	if(g_sum_of_table_entries + NUM_OE_PREDICTOR_TABLES / 2 >= 0)
 		return TAKEN;
 	else
 		return NOT_TAKEN;
@@ -261,20 +283,64 @@ bool GetPrediction_openend(UINT32 PC) {
 
 
 void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 branchTarget) {
-	if(resolveDir == TAKEN){
-		for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
-			UINT32 index = GetPredictor_Index(PC, i);
-			if(predictor_table[i][index] != 7)
-				++predictor_table[i][index];
-		}
-	}else{
-		//cout << "NOT " << endl;
-		for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
-			UINT32 index = GetPredictor_Index(PC, i);
-			if(predictor_table[i][index] != -8)
-				--predictor_table[i][index];
+	if(resolveDir != predDir || abs(g_sum_of_table_entries) <= g_threshold){
+		if(resolveDir == TAKEN){
+			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
+				UINT32 index = GetPredictor_Index(PC, i);
+				if(predictor_table[i][index] != 7)
+					++predictor_table[i][index];
+			}
+		}else{
+			//cout << "NOT " << endl;
+			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
+				UINT32 index = GetPredictor_Index(PC, i);
+				if(predictor_table[i][index] != -8)
+					--predictor_table[i][index];
+			}
 		}
 	}
+	
+
+	// aliasing counter update
+	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
+		UINT32 table_seven_idx = GetPredictor_Index(PC, 7);
+		if((PC & 0b1) == tag_bits[table_seven_idx/2]){
+			if(g_aliasing_counter < 255)
+				g_aliasing_counter++;
+		}else{
+			if(g_aliasing_counter > -253)
+				g_aliasing_counter = g_aliasing_counter - 4;
+			//cout << "decrementing g_threshold_counter" << endl;
+		}
+		if(g_aliasing_counter >= 255)
+			g_use_long_histories = true;
+		if(g_aliasing_counter <= -253)
+			g_use_long_histories = false;
+		tag_bits[table_seven_idx/2] = PC & 0b1;
+	}
+
+	
+	// threshold counter update
+	if(predDir != resolveDir){
+		g_threshold_counter++;
+		if(g_threshold_counter == 63){
+			if(g_threshold < 13)
+				g_threshold++;
+			//cout << "increment threshold: " << g_threshold << endl;
+			g_threshold_counter = 0;
+		}
+	}
+
+	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
+		g_threshold_counter--;
+		if(g_threshold_counter == -64){
+			if(g_threshold > 6)
+				g_threshold--;
+			//cout << "decrement threshold: " << g_threshold << endl;
+			g_threshold_counter = 0;
+		}
+	}
+	
 
 	bool highestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
 	g_bhr_top = g_bhr_top << 1 | highestBit;
