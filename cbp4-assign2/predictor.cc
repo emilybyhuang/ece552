@@ -158,6 +158,7 @@ void InitPredictor_openend() {
 	g_threshold = 8;
 	g_threshold_counter = 0;
 	g_sum_of_table_entries = 0;
+	g_aliasing_counter = 0;
 	g_use_long_histories = false;
 }
 
@@ -294,26 +295,28 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	}
 	
 	
-	/*
+
 	// aliasing counter update
-	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
+	if((predDir != resolveDir) && (abs(g_sum_of_table_entries) <= g_threshold)){
 		UINT32 table_seven_idx = GetPredictor_Index(PC, 7);
-		if((PC & 0b1) == tag_bits[table_seven_idx/2]){
-			if(g_aliasing_counter < 255)
-				g_aliasing_counter++;
-		}else{
-			if(g_aliasing_counter > -253)
-				g_aliasing_counter = g_aliasing_counter - 4;
-			//cout << "decrementing g_threshold_counter" << endl;
+		if(table_seven_idx%2 == 0){
+			if((PC & 0b1) == tag_bits[table_seven_idx/2]){
+				if(g_aliasing_counter < 255)
+					g_aliasing_counter++;
+			}else{
+				if(g_aliasing_counter > -253)
+					g_aliasing_counter = g_aliasing_counter - 4;
+				//cout << "decrementing g_threshold_counter" << endl;
+			}
 		}
+		
 		if(g_aliasing_counter >= 255)
 			g_use_long_histories = true;
 		if(g_aliasing_counter <= -253)
 			g_use_long_histories = false;
 		tag_bits[table_seven_idx/2] = PC & 0b1;
 	}
-	*/
-	
+
 
 	// threshold counter update
 	if(predDir != resolveDir){
@@ -326,8 +329,9 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 			//}
 		}
 	}
+	
 
-	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) < g_threshold)){
+	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) <= g_threshold)){
 		g_threshold_counter--;
 		if(g_threshold_counter == -64){
 			//if(g_threshold > 0){
