@@ -113,7 +113,7 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 	privateHistoryTable_2level[bht_index] = privateHistoryTable_2level[bht_index] << 1 | resolveDir;
 }
 
-#define NUM_OE_PREDICTOR_TABLES 8
+#define NUM_OE_PREDICTOR_TABLES 11
 #define NUM_ENTRIES_OE_PREDICTOR_TABLE 2048
 
 #define OE_PREDICTOR_TABLES_INDEX_WIDTH 11  //2^11 = 2048
@@ -145,10 +145,11 @@ bool g_use_long_histories;
 
 
 
-std::vector<std::vector<char>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <char>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
+std::vector<std::vector<int>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <int>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
 std::vector<char> tag_bits(NUM_ENTRIES_OE_PREDICTOR_TABLE/2, 0);
 
 void InitPredictor_openend() {
+	//cout << "initialize" << endl;
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
 		// init all to -1 very weak not taken
 		for(UINT32 j = 0; j < NUM_ENTRIES_OE_PREDICTOR_TABLE; j++){
@@ -160,11 +161,14 @@ void InitPredictor_openend() {
 	g_sum_of_table_entries = 0;
 	g_aliasing_counter = 0;
 	g_use_long_histories = false;
+	g_bhr_top = 0;
+	g_bhr_middle = 0;
+	g_bhr_bottom = 0;
 }
 
 // compress any number with 8 bits to 1 bit
 UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
-	// i: current set of 8
+	// i: current set of 
 	UINT32 res = 0b0;
 	for(UINT32 i = 0; i < n; i++){
 		res = res ^ ((history_bits >> i) & 0x1);
@@ -188,16 +192,18 @@ UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_c
 
 
 UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
-	UINT32 temp;
-	UINT32 parameter;
-	UINT64 parameter1, parameter2;
-
+	UINT32 temp = 0;
+	UINT32 parameter = 0;
+	UINT64 parameter1 = 0, parameter2 = 0;
+	//cout <<"i: "<< i << endl;
 	switch(i){
 		case 0:
 			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & 0X11);
 			
 		case 1:
-			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
+			//return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
+			return ((phr & 0xFF) << 3 |(g_bhr_bottom & 0X7)) ^ (PC & ELEVEN_BIT_MASK);
+ 
 
 		case 2:
 			if(!g_use_long_histories){
@@ -237,13 +243,34 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 
 		case 7:
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
-
+		
+		case 8:
+			/*
+			parameter1 = (g_bhr_bottom & 0XFFFFFFFFFF) % 2039;
+			parameter2 = ((g_bhr_middle & 0XFFFF) << 24 | (g_bhr_bottom >> 40)) % 2039;
+			// temp = Find_NBitToCompress(parameter, 40, 4);set_of_indices
+			// temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom & 0X28, 40, 4);
+			return (parameter1 ^ parameter2) ^ (PC & ELEVEN_BIT_MASK) & ELEVEN_BIT_MASK;
+			*/
+		case 9:
+			/*
+			temp = Find_NBitToCompress(g_bhr_middle, 64, 4);
+			temp = temp << 4 | Find_NBitToCompress(g_bhr_bottom, 64, 4);
+			return temp;
+			*/
+		case 10:
+			/*
+			temp = Find_NBitToCompress(g_bhr_top, 64, 4);
+			//temp = temp << 4 | Find_NBitToCompress(g_bhr_middle, 64, 4);
+			return temp & ELEVEN_BIT_MASK;;
+			*/
 		default:
 			return PC & ELEVEN_BIT_MASK;
 	}
 }
-vector<set<int>> set_of_indices(8);
+vector<set<int>> set_of_indices(NUM_OE_PREDICTOR_TABLES);
 bool GetPrediction_openend(UINT32 PC) {
+	//cout << "get prediction" << endl;
 //access every table and get the value of counter
 //sum up the values and return the prediction result
 
@@ -263,8 +290,8 @@ bool GetPrediction_openend(UINT32 PC) {
 
 	
 	
-	//cout << "sum: " << sum << endl;
-	UINT32 phr_bit = (PC & PHR_MASK) >> 6;
+	//cout << "sum: " << g_sum_of_table_entries << endl;
+	UINT32 phr_bit = (PC & PHR_MASK) >> 3;
 	phr = phr << 1;
 	phr = phr | phr_bit;
 	// phr.erase(phr.begin());
@@ -277,6 +304,7 @@ bool GetPrediction_openend(UINT32 PC) {
 
 
 void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 branchTarget) {
+	//cout << "update prediction" << endl;
 	if(resolveDir != predDir || abs(g_sum_of_table_entries) <= g_threshold){
 		if(resolveDir == TAKEN){
 			for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
