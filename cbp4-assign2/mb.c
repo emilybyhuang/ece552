@@ -6,7 +6,6 @@ int main(int argc, char *argv[])
     register int r1 = 0;
     register int r2 = 0;
     register int r3 = 0;
-    // doest not sotre counter i in order to have load and store from stack opertaions instrution for variety
     int i;
     for (i = 0; i < 100000; i++)
     {
@@ -24,19 +23,35 @@ int main(int argc, char *argv[])
 // the pattern and consistently make correct predictions after a few training loops.
 // Therefore, to correctly predict all branch outcomes, the modulo divisor should be no more than 
 // (1 + # of branch history bits). 
+//
 // 2-level PAp branch predictor uses 6-bit wide history, it can track the pattern of cycle of at most 7.
-// The result of branch patterns for this microbenchmark is NTTTTTTTTT (as one cycle), there will be 
+// The result of the microbenchmark with divisor = 7 (A) has only 2486 mispredictions.
+//
+// The branch patterns for the microbenchmark with divisor = 10 (B & C) is NTTTTTTTTT (as one cycle), there will be 
 // 1 misprediction per cycle at steady state. The misprediction will occur when predicting the next branch 
-// outcome (which is N) at TTTTTT. The predictor will give a T instead of N, which is a wrong prediction.
+// outcome (which is N) at TTTTTT. The predictor will give a T instead of N, which is a wrong prediction. B (loop
+// number 100k) has 12512 mispredictions and C (loop number 1M) has 102489 mispredictions. Subtracting the 
+// mispredictions in A (2486), # of mispredictions in C is approximately 10 times # of mispredictions, which matches
+// the 10 multiple of the number of loops in B and C.
+
+
 // Excluding the misprediction during the training process
 //
+// A:
+// Loop number = 100000, modulo divisor = 7:
+// NUM_INSTRUCTIONS     	 :    2081127
+// NUM_CONDITIONAL_BR   	 :     233243
+// 2level:  NUM_MISPREDICTIONS   	 :       2486
+// 2level:  MISPRED_PER_1K_INST  	 :      1.195
 
+// B:
 // Loop number = 100000, modulo divisor = 10:
 // NUM_INSTRUCTIONS     	 :    2176925
 // NUM_CONDITIONAL_BR   	 :     233240
 // 2level:  NUM_MISPREDICTIONS   	 :      12512
 // 2level:  MISPRED_PER_1K_INST  	 :      5.748
 //
+// C:
 // Loop number = 1000000, modulo divisor = 10:
 // NUM_INSTRUCTIONS     	 :   20266842
 // NUM_CONDITIONAL_BR   	 :    2033243
@@ -79,7 +94,11 @@ int main(int argc, char *argv[])
 # mb.c:15: 	if (r1 % 5 == 0){
 	.loc 1 15 5
 	testl	%eax, %eax	# _1
-	jne	.L3	#,                  //branch instruction of 'modulo if block'
+                                               // ----------MAIN BRANCH INSTRUCTION FOR ANALYSIS----------
+	jne	.L3	#,                     // branch instruction of 'modulo if block'
+                                               // NOT_TAKEN to enter the if statement
+                                               // TAKEN to continue the next for loop
+                                               
 # mb.c:16: 		++r2;			
 	.loc 1 16 3
 	addl	$1, %r12d	#, r2
@@ -91,7 +110,8 @@ int main(int argc, char *argv[])
 # mb.c:11:     for (i = 0; i < 100000; i++)
 	.loc 1 11 5 discriminator 1
 	cmpl	$99999, -28(%rbp)	#, i
-	jle	.L4	#,                  //branch instruction of 'for loop' 
+	jle	.L4	#,                     // branch instruction of 'for loop' 
+
 # mb.c:19:     r3 = r2 + r1;	
 	.loc 1 19 8
 	leal	(%r12,%rbx), %r13d	#, r3
