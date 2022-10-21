@@ -9,18 +9,21 @@
 // array to hold all of the prections
 // since prediction tables have 8192 bits, each entry is 2 bits => 8192/2=4096
 #define NUM_ENTRIES_TWOBIT_SAT 4096
-// 4096 is 2 ^ 12  thus use this bit mask to get lowest 12 bits of pc
+
+// Masks for getting the wanted bits
 #define THREE_BIT_MASK 0x7
+#define FIVE_BIT_MASK 0x1F
 #define SIX_BIT_MASK 0x3F
 #define EIGHT_BIT_MASK 0XFF
 #define NINE_BIT_MASK 0XFF8
 #define ELEVEN_BIT_MASK 0X7FF
+// 4096 is 2 ^ 12  thus use this bit mask to get lowest 12 bits of pc
 #define TWELVE_BIT_MASK 0xFFF 
 #define SIXTEEN_BIT_MASK 0xFFFF
 #define THIRTYTWO_BIT_MASK 0XFFFFFFFF
+#define FOURTY_BIT_MASK 0XFFFFFFFFFF
 #define FOURTYEIGHT_BIT_MASK 0XFFFFFFFFFFFF
 #define SIXTYFOUR_BIT_MASK 0XFFFFFFFFFFFFFFFF 
-
 #define TOP_BIT_MASK 0X80000000
 
 UINT32 predictionTable_2bitsat[NUM_ENTRIES_TWOBIT_SAT];
@@ -64,8 +67,6 @@ void UpdatePredictor_2bitsat(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 #define NUM_ENTRIES_PRIVATE_HISTORY_TABLE 512
 #define NUM_PRIVATE_PREDICTOR_TABLES 8
 #define NUM_ENTRIES_PRIVATE_PREDICTOR_TABLE 64
-
-
 
 UINT32 privateHistoryTable_2level[NUM_ENTRIES_PRIVATE_HISTORY_TABLE];
 UINT32 privatePredictorTable_2level[NUM_PRIVATE_PREDICTOR_TABLES][NUM_ENTRIES_PRIVATE_PREDICTOR_TABLE];
@@ -112,18 +113,15 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 // openended
 /////////////////////////////////////////////////////////////
 
-
 #define NUM_OE_PREDICTOR_TABLES 11
 #define NUM_ENTRIES_OE_PREDICTOR_TABLE 2048
 #define OE_PREDICTOR_TABLES_INDEX_WIDTH 11  //2^11 = 2048
 
 
-// 64 bit
+// 64 bits each: total history register is 192 bits wide
 unsigned long long g_bhr_top;
 unsigned long long g_bhr_middle;
 unsigned long long g_bhr_bottom;
-// 9 bit
-int32_t g_aliasing_counter;
 // 7 bit
 int32_t g_threshold_counter;
 UINT32 g_threshold;
@@ -141,13 +139,12 @@ void InitPredictor_openend() {
 	g_threshold = 8;
 	g_threshold_counter = 0;
 	g_sum_of_table_entries = 0;
-	g_aliasing_counter = 0;
 	g_bhr_top = 0;
 	g_bhr_middle = 0;
 	g_bhr_bottom = 0;
 }
 
-// compress any number with 8 bits to 1 bit
+// compress any number with n bits to 1 bit by XOR-ing all of the bits
 UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 	UINT32 res = 0b0;
 	for(UINT32 i = 0; i < n; i++){
@@ -157,7 +154,7 @@ UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
 }
 
 
-// for any number: find groups of 8 bits to call Compress_EightBitToOneBit
+// for any number: find groups of 8 bits to call Compress_NBitToOneBit
 UINT32 Find_NBitToCompress(unsigned long long history_bits, UINT32 num_bits_to_compress, UINT32 num_bits_to_output){
 	UINT32 group_size = num_bits_to_compress/8;
 	UINT32 res = 0;	
@@ -173,15 +170,16 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 	UINT32 temp = 0;
 	UINT32 parameter = 0;
 	UINT64 parameter1 = 0, parameter2 = 0, parameter3 = 0;
+	// We came up with these bit patterns to index by experimenting with the MPKI
 	switch(i){
 		case 0:
-			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & 0X11);
+			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & THREE_BIT_MASK);
 			
 		case 1:
-			return (g_bhr_bottom & 0X7) ^ (PC & ELEVEN_BIT_MASK);
+			return (g_bhr_bottom & THREE_BIT_MASK) ^ (PC & ELEVEN_BIT_MASK);
 
 		case 2:
-			return ((g_bhr_bottom & 0x1F) << 5 | (g_bhr_bottom & 0x1F)) ^ (PC & ELEVEN_BIT_MASK);
+			return ((g_bhr_bottom & FIVE_BIT_MASK) << 5 | (g_bhr_bottom & FIVE_BIT_MASK)) ^ (PC & ELEVEN_BIT_MASK);
 		
 		case 3:
 			return ((g_bhr_bottom & EIGHT_BIT_MASK)^(PC & ELEVEN_BIT_MASK));
@@ -199,8 +197,8 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 		
 		case 8:	
-			parameter1 = (g_bhr_bottom & 0XFFFFFFFFFF) % 2039;
-			parameter2 = ((g_bhr_middle & 0XFFFF) << 24 | (g_bhr_bottom >> 40)) % 2039;
+			parameter1 = (g_bhr_bottom & FOURTY_BIT_MASK) % 2039;
+			parameter2 = ((g_bhr_middle & SIXTEEN_BIT_MASK) << 24 | (g_bhr_bottom >> 40)) % 2039;
 			return (parameter1 ^ parameter2) ^ (PC & ELEVEN_BIT_MASK) & ELEVEN_BIT_MASK;
 			
 		case 9:
