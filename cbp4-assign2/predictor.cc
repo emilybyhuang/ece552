@@ -10,24 +10,18 @@
 // since prediction tables have 8192 bits, each entry is 2 bits => 8192/2=4096
 #define NUM_ENTRIES_TWOBIT_SAT 4096
 // 4096 is 2 ^ 12  thus use this bit mask to get lowest 12 bits of pc
-#define TWELVE_BIT_MASK 0xFFF 
-#define TWO_BIT_MASK 0X3
 #define THREE_BIT_MASK 0x7
-#define FOUR_BIT_MASK 0xF  //COUNTER 'char'
 #define SIX_BIT_MASK 0x3F
 #define EIGHT_BIT_MASK 0XFF
 #define NINE_BIT_MASK 0XFF8
+#define ELEVEN_BIT_MASK 0X7FF
+#define TWELVE_BIT_MASK 0xFFF 
 #define SIXTEEN_BIT_MASK 0xFFFF
 #define THIRTYTWO_BIT_MASK 0XFFFFFFFF
 #define FOURTYEIGHT_BIT_MASK 0XFFFFFFFFFFFF
 #define SIXTYFOUR_BIT_MASK 0XFFFFFFFFFFFFFFFF 
 
-
-
-#define INDEX_MASK 0x3F
-#define PHR_MASK 0X20
 #define TOP_BIT_MASK 0X80000000
-#define ELEVEN_BIT_MASK 0X7FF
 
 UINT32 predictionTable_2bitsat[NUM_ENTRIES_TWOBIT_SAT];
 
@@ -137,7 +131,6 @@ int32_t g_sum_of_table_entries;
 
 vector<set<int>> set_of_indices(NUM_OE_PREDICTOR_TABLES);
 std::vector<std::vector<int>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vector <int>(NUM_ENTRIES_OE_PREDICTOR_TABLE) );
-std::vector<char> tag_bits(NUM_ENTRIES_OE_PREDICTOR_TABLE/2, 0);
 
 void InitPredictor_openend() {
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
@@ -156,7 +149,6 @@ void InitPredictor_openend() {
 
 // compress any number with 8 bits to 1 bit
 UINT32 Compress_NBitToOneBit(UINT32 history_bits, UINT32 n){
-	// i: current set of 
 	UINT32 res = 0b0;
 	for(UINT32 i = 0; i < n; i++){
 		res = res ^ ((history_bits >> i) & 0x1);
@@ -268,7 +260,6 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		}
 	}
 	
-
 	if((predDir == resolveDir) && (abs(g_sum_of_table_entries) <= g_threshold)){
 		g_threshold_counter--;
 		if(g_threshold_counter == -64){
@@ -277,7 +268,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 		}
 	}
 	
-
+	// update global history of taken/not taken
 	unsigned long long bottomHighestBit = (g_bhr_bottom & TOP_BIT_MASK) >> 63;
 	unsigned long long middleHighestBit = (g_bhr_middle & TOP_BIT_MASK) >> 63;
 	if(resolveDir == TAKEN){
@@ -291,6 +282,7 @@ void UpdatePredictor_openend(UINT32 PC, bool resolveDir, bool predDir, UINT32 br
 	}
 }
 
+// helper function to print usage of table entries
 void print_set(){
 	cout << endl;
 	for(auto s: set_of_indices){
