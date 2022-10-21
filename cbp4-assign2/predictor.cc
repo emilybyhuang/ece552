@@ -140,9 +140,7 @@ std::vector<std::vector<int>> predictor_table(NUM_OE_PREDICTOR_TABLES, std::vect
 std::vector<char> tag_bits(NUM_ENTRIES_OE_PREDICTOR_TABLE/2, 0);
 
 void InitPredictor_openend() {
-	//cout << "initialize" << endl;
 	for(UINT32 i = 0; i < NUM_OE_PREDICTOR_TABLES; i++){
-		// init all to -1 very weak not taken
 		for(UINT32 j = 0; j < NUM_ENTRIES_OE_PREDICTOR_TABLE; j++){
 			predictor_table[i][j] = 0b0;
 		}	
@@ -204,6 +202,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 		
 		case 6:
 			return (Find_NBitToCompress(g_bhr_bottom & THIRTYTWO_BIT_MASK, 32, 8) << 3) | (PC & THREE_BIT_MASK);
+
 		case 7:
 			return (Find_NBitToCompress(g_bhr_bottom & FOURTYEIGHT_BIT_MASK, 48, 8) << 3) | (PC & THREE_BIT_MASK);
 		
