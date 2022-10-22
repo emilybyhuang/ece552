@@ -95,8 +95,6 @@ int main(int argc, char* argv[]){
     //print_stats
     ///////////////////////////////////////////
 
-    print_set();
-
       printf("\n");
       printf("\nNUM_INSTRUCTIONS     \t : %10llu",   tracer->GetNumInst());
       printf("\nNUM_CONDITIONAL_BR   \t : %10llu",   tracer->GetNumCondBranch());
@@ -109,6 +107,3 @@ int main(int argc, char* argv[]){
       printf("\nopenend: MISPRED_PER_1K_INST  \t : %10.3f",   1000.0*(double)(numMispred_openend)/(double)(tracer->GetNumInst()));
       printf("\n\n");
 }
-
-
-
