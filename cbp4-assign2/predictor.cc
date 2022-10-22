@@ -1,7 +1,9 @@
 #include "predictor.h"
+
 #include <vector>
 #include <bitset>
 #include <unordered_map>
+#include <set>
 /////////////////////////////////////////////////////////////
 // 2bitsat
 /////////////////////////////////////////////////////////////
@@ -113,6 +115,7 @@ void UpdatePredictor_2level(UINT32 PC, bool resolveDir, bool predDir, UINT32 bra
 // openended
 /////////////////////////////////////////////////////////////
 
+
 #define NUM_OE_PREDICTOR_TABLES 11
 #define NUM_ENTRIES_OE_PREDICTOR_TABLE 2048
 #define OE_PREDICTOR_TABLES_INDEX_WIDTH 11  //2^11 = 2048
@@ -173,7 +176,7 @@ UINT32 GetPredictor_Index(UINT32 PC, UINT32 i){
 	// We came up with these bit patterns to index by experimenting with the MPKI
 	switch(i){
 		case 0:
-			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ (PC & THREE_BIT_MASK);
+			return (g_bhr_bottom & ELEVEN_BIT_MASK) ^ ((PC >> 4) & THREE_BIT_MASK);
 			
 		case 1:
 			return (g_bhr_bottom & THREE_BIT_MASK) ^ (PC & ELEVEN_BIT_MASK);
