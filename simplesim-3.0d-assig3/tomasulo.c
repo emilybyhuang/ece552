@@ -227,21 +227,55 @@ void issue_To_execute(int current_cycle) {
 void dispatch_To_issue(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
+   //OoO issue
+   //check from head to tail: the first available dispatched && has RS available
+   md_opcode_op op; //need to write...
+   //.....
+   // .....
    if (IS_ICOMP(op)) {
       //INT
-      
+      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry, set Map table (according to output reg) 
+
+         D_success = true;
+      }
    } else if (IS_FCOMP(op)) {
       //FP
-      
-   } else if (IS_UNCOND_CTRL(op) || IS_COND_CTRL(op)) {
+      if (isReservFull(reservFP, RESERV_FP_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry
+
+         D_success = true;
+      }
+   } else if (IS_UNCOND_CTRL) {
       //unconditional branches
-      return;       
+         D_success = true;        
+   } else if (IS_COND_CTRL(op)) {
+      // confitional branches
+         D_success = true; 
    } else if (IS_LOAD(op)) {
       //load
+      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry, set Map table (according to output reg) 
+
+         D_success = true;
+      }
    } else if (IS_STORE(op)) {
       //store
+      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry
+
+         D_success = true;
       }
    }
+
 
 }
 
@@ -294,49 +328,6 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    // todo: not head, supposed to be the insn (havn't enter D stage) after head
    instruction_t* curr_insn = IFQ->tail->data;
    md_opcode curr_op = curr_insn->op;
-   if (IS_ICOMP(op)) {
-      //INT
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry, set Map table (according to output reg) 
-
-         D_success = true;
-      }
-   } else if (IS_FCOMP(op)) {
-      //FP
-      if (isReservFull(reservFP, RESERV_FP_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry
-
-         D_success = true;
-      }
-   } else if (IS_UNCOND_CTRL) {
-      //unconditional branches
-         D_success = true;        
-   } else if (IS_COND_CTRL(op)) {
-      // confitional branches
-         D_success = true; 
-   } else if (IS_LOAD(op)) {
-      //load
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry, set Map table (according to output reg) 
-
-         D_success = true;
-      }
-   } else if (IS_STORE(op)) {
-      //store
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry
-
-         D_success = true;
-      }
-   }
    if (D_success)
       curr_insn->tom_dispatch_cycle = current_cycle;
 
