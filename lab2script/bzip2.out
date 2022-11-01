@@ -1,0 +1,12 @@
+.......................................................................................................................................................
+
+NUM_INSTRUCTIONS     	 :  150000004
+NUM_CONDITIONAL_BR   	 :   25323638
+
+2bitsat: NUM_MISPREDICTIONS   	 :    1224967
+2bitsat: MISPRED_PER_1K_INST  	 :      8.166
+2level:  NUM_MISPREDICTIONS   	 :    1297677
+2level:  MISPRED_PER_1K_INST  	 :      8.651
+openend: NUM_MISPREDICTIONS   	 :    1072184
+openend: MISPRED_PER_1K_INST  	 :      7.148
+
