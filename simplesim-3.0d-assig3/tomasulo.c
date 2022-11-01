@@ -23,15 +23,15 @@
 
 /* PARAMETERS OF THE TOMASULO'S ALGORITHM */
 
-#define INSTR_QUEUE_SIZE         10
+#define INSTR_QUEUE_SIZE         16
 
-#define RESERV_INT_SIZE    4
-#define RESERV_FP_SIZE     2
-#define FU_INT_SIZE        2
+#define RESERV_INT_SIZE    5
+#define RESERV_FP_SIZE     3
+#define FU_INT_SIZE        3
 #define FU_FP_SIZE         1
 
-#define FU_INT_LATENCY     4
-#define FU_FP_LATENCY      9
+#define FU_INT_LATENCY     5
+#define FU_FP_LATENCY      7
 
 /* IDENTIFYING INSTRUCTIONS */
 
@@ -167,6 +167,8 @@ static bool is_simulation_done(counter_t sim_insn) {
 
   /* ECE552: YOUR CODE GOES HERE */
 
+  // Check if all data structures are empty
+
   return true; //ECE552: you can change this as needed; we've added this so the code provided to you compiles
 }
 
@@ -225,6 +227,22 @@ void issue_To_execute(int current_cycle) {
 void dispatch_To_issue(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
+   if (IS_ICOMP(op)) {
+      //INT
+      
+   } else if (IS_FCOMP(op)) {
+      //FP
+      
+   } else if (IS_UNCOND_CTRL(op) || IS_COND_CTRL(op)) {
+      //unconditional branches
+      return;       
+   } else if (IS_LOAD(op)) {
+      //load
+   } else if (IS_STORE(op)) {
+      //store
+      }
+   }
+
 }
 
 /* 
@@ -273,14 +291,15 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    bool D_success = false;
    //head instruction:
    //note: assume deep copy now so it's a static value
-   instruction_t* curr_insn = IFQ->head->data;
+   // todo: not head, supposed to be the insn (havn't enter D stage) after head
+   instruction_t* curr_insn = IFQ->tail->data;
    md_opcode curr_op = curr_insn->op;
    if (IS_ICOMP(op)) {
       //INT
       if (isReservFull(reservINT, RESERV_INT_SIZE)) {
          //stall
       } else {
-         //allocate RS entry, set blablablablabla 
+         //allocate RS entry, set Map table (according to output reg) 
 
          D_success = true;
       }
@@ -299,7 +318,25 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    } else if (IS_COND_CTRL(op)) {
       // confitional branches
          D_success = true; 
-   } else if 
+   } else if (IS_LOAD(op)) {
+      //load
+      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry, set Map table (according to output reg) 
+
+         D_success = true;
+      }
+   } else if (IS_STORE(op)) {
+      //store
+      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
+         //stall
+      } else {
+         //allocate RS entry
+
+         D_success = true;
+      }
+   }
    if (D_success)
       curr_insn->tom_dispatch_cycle = current_cycle;
 
