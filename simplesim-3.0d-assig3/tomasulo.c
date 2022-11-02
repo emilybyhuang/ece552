@@ -216,6 +216,17 @@ void issue_To_execute(int current_cycle) {
   /* ECE552: YOUR CODE GOES HERE */
 }
 
+bool getFreeReservationEntry(instruction_t *reservationStationTable[], int size, instruction_t *insertPlace){
+   // traverse reservationStationTable and check if it's null
+   for(int i = 0; i < size; i++){
+      // as long as if one empty
+      if(reservationStationTable[i] == NULL)
+         insertPlace = reservationStationTable[i];
+         return false;
+   }
+   return true;
+}
+
 /* 
  * Description: 
  * 	Moves instruction(s) from the dispatch stage to the issue stage
@@ -226,57 +237,58 @@ void issue_To_execute(int current_cycle) {
  */
 void dispatch_To_issue(int current_cycle) {
 
-  /* ECE552: YOUR CODE GOES HERE */
+   /* ECE552: YOUR CODE GOES HERE */
+   // case where no instruction in instruction queue
+   if (IFQ -> head == IFQ -> tail){
+      return;
+   }
+ 
+
+   /*
+   A fetched instruction can be dispatched (complete D) immediately if a reservation
+   station entry will be available in the next cycle. Structural hazards on reservation
+   stations are resolved here with stalls.
+   */
+   bool D_success = false;
+   instruction_t* currInstr = IFQ->head->data;
+   // check for structural hazard
+
+   md_opcode currOp = currInstr->op;
+
    //OoO issue
    //check from head to tail: the first available dispatched && has RS available
-   md_opcode_op op; //need to write...
-   //.....
-   // .....
-   if (IS_ICOMP(op)) {
+
+
+   if(IS_UNCOND_CTRL(currOp) || IS_COND_CTRL(currOp)){
+      D_success = true;
+      curr_insn->tom_dispatch_cycle = current_cycle;
+   }else if (USES_INT_FU(currOp)) {
       //INT
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry, set Map table (according to output reg) 
-
-         D_success = true;
+      instruction_t *insertPlace = NULL;
+      // returns true if avail entry and entryToInsert is where to insert
+      // returns false if no entry avail
+      D_success = getFreeReservationEntry(reservINT, RESERV_INT_SIZE, insertPlace);
+      if(D_success){
+         insertPlace = currInstr;
+         curr_insn->tom_dispatch_cycle = current_cycle;
       }
-   } else if (IS_FCOMP(op)) {
+   } else if (USES_FP_FU(currOp)) {
       //FP
-      if (isReservFull(reservFP, RESERV_FP_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry
-
-         D_success = true;
-      }
-   } else if (IS_UNCOND_CTRL) {
-      //unconditional branches
-         D_success = true;        
-   } else if (IS_COND_CTRL(op)) {
-      // confitional branches
-         D_success = true; 
-   } else if (IS_LOAD(op)) {
-      //load
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry, set Map table (according to output reg) 
-
-         D_success = true;
-      }
-   } else if (IS_STORE(op)) {
-      //store
-      if (isReservFull(reservINT, RESERV_INT_SIZE)) {
-         //stall
-      } else {
-         //allocate RS entry
-
-         D_success = true;
-      }
+      instruction_t *insertPlace = NULL;
+      // returns true if avail entry and entryToInsert is where to insert
+      // returns false if no entry avail
+      D_success = getFreeReservationEntry(reservFP, RESERV_FP_SIZE, insertPlace);
+      if(D_success){
+         insertPlace = currInstr;
+         curr_insn->tom_dispatch_cycle = current_cycle;
+      } 
    }
-
-
+   
+   // remove instruction from queue
+   if(D_success)
+      queuePop(IFQ);
+   // if !D_success: stall so don't pop from queue cuz wanna retry when reservation
+   // station needed is ready
 }
 
 /* 
@@ -290,6 +302,23 @@ void dispatch_To_issue(int current_cycle) {
 void fetch(instruction_trace_t* trace) {
   
   /* ECE552: YOUR CODE GOES HERE */
+   
+}
+
+
+/* 
+ * Description: 
+ * 	Calls fetch and dispatches an instruction at the same cycle (if possible)
+ * Inputs:
+ *      trace: instruction trace with all the instructions executed
+ * 	current_cycle: the cycle we are at
+ * Returns:
+ * 	None
+ */
+void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
+  /* ECE552: YOUR CODE GOES HERE */
+
+
    if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
       return;
    }
@@ -314,34 +343,6 @@ void fetch(instruction_trace_t* trace) {
    }
 }
 
-void isReservFuFull(instruction_t *table, int size) {
-
-}
-
-
-/* 
- * Description: 
- * 	Calls fetch and dispatches an instruction at the same cycle (if possible)
- * Inputs:
- *      trace: instruction trace with all the instructions executed
- * 	current_cycle: the cycle we are at
- * Returns:
- * 	None
- */
-void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
-  /* ECE552: YOUR CODE GOES HERE */
-
-   bool D_success = false;
-   //head instruction:
-   //note: assume deep copy now so it's a static value
-   // todo: not head, supposed to be the insn (havn't enter D stage) after head
-   instruction_t* curr_insn = IFQ->tail->data;
-   md_opcode curr_op = curr_insn->op;
-   if (D_success)
-      curr_insn->tom_dispatch_cycle = current_cycle;
-
-}
-
 /* 
  * Description: 
  * 	Performs a cycle-by-cycle simulation of the 4-stage pipeline
@@ -354,7 +355,7 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
  */
 counter_t runTomasulo(instruction_trace_t* trace)
 {
-  fetch_index = 1;
+  
   //initialize instruction queue
   int i;
   for (i = 0; i < INSTR_QUEUE_SIZE; i++) {
@@ -386,6 +387,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
   }
   
   /* ECE552: my code begin*/
+  fetch_index = 1;
   initializeQueue(IFQ);
   /* ECE552: my code end*/
 
