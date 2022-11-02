@@ -78,9 +78,9 @@
 /* VARIABLES */
 
 //instruction queue for tomasulo
-static instruction_t* instr_queue[INSTR_QUEUE_SIZE];
+// static instruction_t* instr_queue[INSTR_QUEUE_SIZE];
 //number of instructions in the instruction queue
-static int instr_queue_size = 0;
+// static int instr_queue_size = 0;
 
 //reservation stations (each reservation station entry contains a pointer to an instruction)
 static instruction_t* reservINT[RESERV_INT_SIZE];
@@ -290,19 +290,28 @@ void dispatch_To_issue(int current_cycle) {
 void fetch(instruction_trace_t* trace) {
   
   /* ECE552: YOUR CODE GOES HERE */
-  if (fetch_index >= INSTR_TRACE_SIZE) {
-     return;
-  }
-  if (isQueueFull(IFQ) == false) {
-    instruction_t *instr = NULL;
-    instr = get_instr(trace, fetch_index);
-    if (!IS_TRAP(instr->op)) {
-       // do not push TRAP insn
-       queuePush(trace->table[fetch_index], IFQ); 
-    }
-    fetch_index ++;
-  }
+   if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
+      return;
+   }
 
+   instruction_t *instr = NULL;
+   instr = get_instr(trace, fetch_index);
+   fetch_index++;
+   // if it is a trap instruction: get another instr
+   while (IS_TRAP(instr->op)) {
+      fetch_index++;
+      instr = get_instr(trace, fetch_index);
+   }
+
+   // this must be a non trap instruction: 
+   // it's valid to be pushed into instruction queue
+   bool instrInsertionSuccess = queuePush(instr, IFQ);
+
+   // that means that this instruction couldn't be inserted
+   // (either instr queue full or ran out of memory: try again)
+   if(!instrInsertionSuccess){
+      fetch_index--;
+   }
 }
 
 void isReservFuFull(instruction_t *table, int size) {
