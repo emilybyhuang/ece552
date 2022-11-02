@@ -189,6 +189,16 @@ void CDB_To_retire(int current_cycle) {
 
 }
 
+instruction_t *getOlder(instruction_t *a, instruction_t *b){
+   if(!a)
+      return b;
+   if(!b)
+      return a;
+   if(a -> tom_execute_cycle < b -> tom_execute_cycle)
+      return a;
+   else
+      return b;
+}
 
 /* 
  * Description: 
@@ -201,6 +211,19 @@ void CDB_To_retire(int current_cycle) {
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
+  // check all rs entries for something with execute cycle < current cycle: that means it's done
+  // get the oldest one and put on CDB
+  // free it's rs entry here as well
+   instruction_t *reservEntryToBroadCast = NULL;
+   instruction_t *reservIntEntryToBroadCast = getOldestRsToBroadcast(fuINT, FU_INT_SIZE, current_cycle);
+   instruction_t *reservFPEntryToBroadCast = getOldestRsToBroadcast(fuFP, FU_FP_SIZE, current_cycle);
+   
+   reservEntryToBroadCast = (reservIntEntryToBroadCast == reservFPEntryToBroadCast) ? NULL: getOlder(reservIntEntryToBroadCast, reservFPEntryToBroadCast);
+   reservEntryToBroadCast -> tom_cbd_cycle = current_cycle;
+
+   // free FU that was used  
+   
+
 
 }
 
@@ -234,8 +257,7 @@ void issue_To_execute(int current_cycle) {
       // check if FU avail
       instruction_t *fuINTToUse = getFuAvail(fuINT, FU_INT_SIZE);
       if(fuINTToUse)
-         // TODO: execute cycle is when it's finished, not when it started
-         reservIntEntryToExecute -> tom_execute_cycle = current_cycle;
+         reservIntEntryToExecute -> tom_execute_cycle = current_cycle + FU_INT_LATENCY;
 
    }
 
@@ -244,8 +266,7 @@ void issue_To_execute(int current_cycle) {
       // check if FU avail
       instruction_t *fuFPToUse = getFuAvail(fuFP, FU_FP_SIZE) 
       if(fuFPToUse)
-         // TODO: execute cycle is when it's finished, not when it started
-         reservFpEntryToExecute -> tom_execute_cycle = current_cycle;
+         reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
    }
 
 }
@@ -279,7 +300,7 @@ instruction_t *getOldestRsToIssue(instruction_t *rsTable[], int rsTableSize, int
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(operandsReady(rsTable[i]) && 
          rsTable[i] -> tom_dispatch_cycle < oldest_cycle){
-         oldest_cycle = tom_dispatch_cycle;
+         oldest_cycle = rsTable[i] ->tom_dispatch_cycle;
          oldestRSEntry = rsTable[i];
       }  
    }
@@ -294,8 +315,23 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
          continue;
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
-         oldest_cycle = tom_issue_cycle;
+         oldest_cycle = rsTable[i] ->tom_issue_cycle;
          oldestRSEntry = rsTable[i];
+      }  
+   }
+   return oldestRSEntry;
+}
+
+instruction_t * getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
+   int oldest_cycle = current_cycle;
+   instruction_t *oldestRSEntry = NULL;
+   for(int i = 0; i < fuTableSize; i++){
+      if(fuTable[i] == NULL)
+         continue;
+      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
+      if(fuTable[i] -> tom_execute_cycle < oldest_cycle){
+         oldest_cycle = fuTable[i] -> tom_execute_cycle;
+         oldestRSEntry = fuTable[i];
       }  
    }
    return oldestRSEntry;
