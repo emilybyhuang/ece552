@@ -289,12 +289,15 @@ void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
    // check those that have issued and have FU ready by checking reservation stations
+   //TODO: add a for loop to loop through every RS(3 entries):
    instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
    if(reservIntEntryToExecute){
       // check if FU avail
       instruction_t *fuINTToUse = getFuAvail(fuINT, FU_INT_SIZE);
-      if(fuINTToUse)
+      if(fuINTToUse){
          reservIntEntryToExecute -> tom_execute_cycle = current_cycle + FU_INT_LATENCY;
+	 fuINTToUse = reservIntEntryToExecute;
+	}
 
    }
 
@@ -302,23 +305,24 @@ void issue_To_execute(int current_cycle) {
    if(reservIntEntryToExecute){
       // check if FU avail
       instruction_t *fuFPToUse = getFuAvail(fuFP, FU_FP_SIZE) 
-      if(fuFPToUse)
-         reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
+      if(fuFPToUse){
+        reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
+	fuFPToUse = reservFpEntryToExecute;
+      }
    }
 
 
 
 }
 
-bool getFreeReservationEntry(instruction_t *reservationStationTable[], int size, instruction_t *insertPlace){
+int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
    // traverse reservationStationTable and check if it's null
    for(int i = 0; i < size; i++){
       // as long as if one empty
       if(reservationStationTable[i] == NULL)
-         insertPlace = reservationStationTable[i];
-         return false;
+         return i;
    }
-   return true;
+   return -1;
 }
 
 bool operandsReady(instruction_t *entry){
@@ -352,6 +356,8 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    for(int i = 0; i < rsTableSize; i++){
       if(rsTable[i] == NULL)
          continue;
+	if(rsTable[i] -> tom_execute_cycle != -1)
+		continue;  
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
          oldest_cycle = rsTable[i] ->tom_issue_cycle;
@@ -388,6 +394,8 @@ int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int curren
 // ENTER ISSUE STAGE
 // Main purpose: check if issuable: if source operands are ready(Q is all NULL)
 // can issue
+// TODO:issue in order (therefore issue the oldest dispatched insn), just
+// return the older one of fp and int
 void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
@@ -443,8 +451,12 @@ void fetch(instruction_trace_t* trace) {
    // (either instr queue full or ran out of memory: try again)
    if(!instrInsertionSuccess){
       fetch_index--;
-   }
-   
+   }else{
+	instr -> tom_dispatch_cycle = -1;
+	instr -> tom_issue_cycle = -1;
+	instr -> tom_execute_cycle = -1;
+	instr -> tom_cdb_cycle = -1;
+	} 
 }
 
 /*
@@ -465,14 +477,13 @@ void update_rs_entry(instruction_t* currInstr){
 }
 
 /*
-/*
 Description:
    Update the output reg in map table with it's corresponding instruction
 */
 void update_maptable(instruction_t* currInstr){
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
       if(currInstr -> r_out[i] != DNA)
-         map_table[currInstr -> r_out] = currInstr;
+         map_table[currInstr -> r_out[i]] = currInstr;
    }
 }
 
@@ -516,24 +527,25 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
       currInstr->tom_dispatch_cycle = current_cycle;
    }else if (USES_INT_FU(currOp)) {
       //INT
-      instruction_t *insertPlace = NULL;
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
-      D_success = getFreeReservationEntry(reservINT, RESERV_INT_SIZE, insertPlace);
-      if(D_success){
-         insertPlace = currInstr;
+      int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
+      if(indexToInsert != -1){
+         D_success = true;
+         reservINT[indexToInsert] = currInstr;
          currInstr->tom_dispatch_cycle = current_cycle;
          update_rs_entry(currInstr);
          update_maptable(currInstr);
       }
    } else if (USES_FP_FU(currOp)) {
       //FP
-      instruction_t *insertPlace = NULL;
+
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
-      D_success = getFreeReservationEntry(reservFP, RESERV_FP_SIZE, insertPlace);
-      if(D_success){
-         insertPlace = currInstr;
+      int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
+      if(indexToInsert  != -1){
+         D_success = true;
+         reservFP[indexToInsert] = currInstr;
          currInstr->tom_dispatch_cycle = current_cycle;
          update_rs_entry(currInstr);
          update_maptable(currInstr);
