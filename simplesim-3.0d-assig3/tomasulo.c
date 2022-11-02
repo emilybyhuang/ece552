@@ -200,6 +200,32 @@ instruction_t *getOlder(instruction_t *a, instruction_t *b){
       return b;
 }
 
+void setInputRegTagsToNull(instruction_t *instrToSearch){
+   // check int rs first
+   for(int i = 0; i < RESERV_INT_SIZE; i++){
+      // this reservation station entry is not in use
+      if(reservINT[i] == NULL)
+         continue;
+      for(int j = 0; j < NUM_INPUT_REGS; j++){
+         if(reservINT[i] -> Q[j] == instrToSearch){
+            reservINT[i] -> Q[j] = NULL;
+         }
+      }
+   }
+
+   // check fp rs now
+   for(int i = 0; i < RESERV_FP_SIZE; i++){
+      // this reservation station entry is not in use
+      if(reservFP[i] == NULL)
+         continue;
+      for(int j = 0; j < NUM_INPUT_REGS; j++){
+         if(RESERV_FP_SIZE[i] -> Q[j] == instrToSearch){
+            reservINT[i] -> Q[j] = NULL;
+         }
+      }
+   }
+}
+
 /* 
  * Description: 
  * 	Moves an instruction from the execution stage to common data bus (if possible)
@@ -215,16 +241,36 @@ void execute_To_CDB(int current_cycle) {
   // get the oldest one and put on CDB
   // free it's rs entry here as well
    instruction_t *reservEntryToBroadCast = NULL;
-   instruction_t *reservIntEntryToBroadCast = getOldestRsToBroadcast(fuINT, FU_INT_SIZE, current_cycle);
-   instruction_t *reservFPEntryToBroadCast = getOldestRsToBroadcast(fuFP, FU_FP_SIZE, current_cycle);
+   int reservIntIndexToBroadCast = -1;
+   reservIntIndexToBroadCast = getOldestRsToBroadcast(reservINT, RESERV_INT_SIZE, current_cycle);
+   int reservFPIndexToBroadCast = -1;
+   reservFPIndexToBroadCast = getOldestRsToBroadcast(reservFP, RESERV_FP_SIZE, current_cycle);
+
+   // this is a pointer to the reservation station
+   reservEntryToBroadCast = (reservIntIndexToBroadCast == reservFPIndexToBroadCast) ? 
+      NULL: getOlder(reservINT[reservIntIndexToBroadCast], reservFP[reservFPIndexToBroadCast]);
    
-   reservEntryToBroadCast = (reservIntEntryToBroadCast == reservFPEntryToBroadCast) ? NULL: getOlder(reservIntEntryToBroadCast, reservFPEntryToBroadCast);
    reservEntryToBroadCast -> tom_cbd_cycle = current_cycle;
+   
+   // go thru all rs entries and update if Qi Qj Qk has the same instr 
+   setInputRegTagsToNull(reservEntryToBroadCast);
 
-   // free FU that was used  
+   // TODO: clear the fp for the corresponding one
+
    
 
 
+   // clear the rs that contains the current one to broadcast
+   reservEntryToBroadCast = NULL;
+}
+
+
+intruction_t *getFuAvail(instruction_t *fu[], int numFU){
+   for(int i = 0; i < numFU; i++){
+      if(fu[i] == NULL)
+         return fu[i];
+   }
+   return NULL;
 }
 
 /* 
@@ -237,15 +283,6 @@ void execute_To_CDB(int current_cycle) {
  * Returns:
  * 	None
  */
-
-instruction_t *getFuAvail(instruction_t *fu[], int numFU){
-   for(int i = 0; i < numFU; i++){
-      if(fu[i] == NULL)
-         return fu[i];
-   }
-   return NULL;
-}
-
 
 // ENTER EXECUTE STAGE
 void issue_To_execute(int current_cycle) {
@@ -268,6 +305,8 @@ void issue_To_execute(int current_cycle) {
       if(fuFPToUse)
          reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
    }
+
+
 
 }
 
@@ -322,19 +361,19 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    return oldestRSEntry;
 }
 
-instruction_t * getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
+int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
    int oldest_cycle = current_cycle;
-   instruction_t *oldestRSEntry = NULL;
+   int rsIndex = -1;
    for(int i = 0; i < fuTableSize; i++){
       if(fuTable[i] == NULL)
          continue;
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(fuTable[i] -> tom_execute_cycle < oldest_cycle){
          oldest_cycle = fuTable[i] -> tom_execute_cycle;
-         oldestRSEntry = fuTable[i];
+         rsIndex = i;
       }  
    }
-   return oldestRSEntry;
+   return rsIndex;
 }
 
 /* 
