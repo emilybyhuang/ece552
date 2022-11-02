@@ -214,15 +214,39 @@ void execute_To_CDB(int current_cycle) {
  * Returns:
  * 	None
  */
+
+instruction_t *getFuAvail(instruction_t *fu[], int numFU){
+   for(int i = 0; i < numFU; i++){
+      if(fu[i] == NULL)
+         return fu[i];
+   }
+   return NULL;
+}
+
+
+// ENTER EXECUTE STAGE
 void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
-   // Check all of the reservation stations and execute one from INT and FP
-   // if all of their operands are ready
+   // check those that have issued and have FU ready by checking reservation stations
+   instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
+   if(reservIntEntryToExecute){
+      // check if FU avail
+      instruction_t *fuINTToUse = getFuAvail(fuINT, FU_INT_SIZE);
+      if(fuINTToUse)
+         // TODO: execute cycle is when it's finished, not when it started
+         reservIntEntryToExecute -> tom_execute_cycle = current_cycle;
 
+   }
 
-
-   
+   instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
+   if(reservIntEntryToExecute){
+      // check if FU avail
+      instruction_t *fuFPToUse = getFuAvail(fuFP, FU_FP_SIZE) 
+      if(fuFPToUse)
+         // TODO: execute cycle is when it's finished, not when it started
+         reservFpEntryToExecute -> tom_execute_cycle = current_cycle;
+   }
 
 }
 
@@ -246,7 +270,7 @@ bool operandsReady(instruction_t *entry){
 }
 
 // issue the first that has been dispatched with all operands ready in reservation station
-instruction_t *t getOldestRsToIssue(instruction_t *rsTable[], int rsTableSize, int current_cycle){
+instruction_t *getOldestRsToIssue(instruction_t *rsTable[], int rsTableSize, int current_cycle){
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL; 
    for(int i = 0; i < rsTableSize; i++){
@@ -256,6 +280,21 @@ instruction_t *t getOldestRsToIssue(instruction_t *rsTable[], int rsTableSize, i
       if(operandsReady(rsTable[i]) && 
          rsTable[i] -> tom_dispatch_cycle < oldest_cycle){
          oldest_cycle = tom_dispatch_cycle;
+         oldestRSEntry = rsTable[i];
+      }  
+   }
+   return oldestRSEntry;
+}
+
+instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
+   int oldest_cycle = current_cycle;
+   instruction_t *oldestRSEntry = NULL;
+   for(int i = 0; i < rsTableSize; i++){
+      if(rsTable[i] == NULL)
+         continue;
+      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
+      if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
+         oldest_cycle = tom_issue_cycle;
          oldestRSEntry = rsTable[i];
       }  
    }
