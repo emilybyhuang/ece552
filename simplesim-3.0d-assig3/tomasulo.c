@@ -128,6 +128,7 @@ bool isQueueFull(Queue *q){
 bool queuePush(instruction_t *data, Queue *q){
 	if(isQueueFull(q))return false;
 	Node * node = malloc(sizeof(Node));
+   // can't allocate cuz out of memory
 	if(node == NULL) return false;
 	node -> data = data;
 	node -> next = NULL;
@@ -151,6 +152,16 @@ bool queuePop(Queue *q){
 }
 
 static Queue *IFQ;
+
+void printIFQ(){
+   if(IFQ -> count == 0){
+      printf("Empty queue\n");
+   }
+   Node *curr = IFQ -> head;
+   while(curr){
+
+   }
+}
 /* FUNCTIONAL UNITS */
 
 
@@ -168,24 +179,52 @@ static Queue *IFQ;
  */
 static bool is_simulation_done(counter_t sim_insn) {
 
-  /* ECE552: YOUR CODE GOES HERE */
+   /* ECE552: YOUR CODE GOES HERE */
 
-  // Check if all data structures are empty
+   // Check if all data structures are empty
+   bool isFinished = false;
 
-  return true; //ECE552: you can change this as needed; we've added this so the code provided to you compiles
+   // Check IFQ
+   if(IFQ -> count != 0){
+      printf("IFQ not empty yet!\n");
+      return false;
+   }
+
+   // Check RS
+   for(int i = 0; i < RESERV_INT_SIZE; i++){
+      if(reservINT[i] != NULL){
+         printf("RS INT entry not empty yet!\n");
+         return false;
+      }
+   }
+
+   for(int i = 0; i < RESERV_FP_SIZE; i++){
+      if(reservFP[i] != NULL){
+         printf("RS FP entry not empty yet!\n");
+         return false;
+      }
+   }
+
+   // Check CDB
+   if(commonDataBus != NULL){
+      printf("CDB not empty yet!\n");
+      return false;
+   }
+
+   return true; //ECE552: you can change this as needed; we've added this so the code provided to you compiles
 }
 
 
-int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
+int getOldestRsToBroadcast(instruction_t *rsTable[], int rsTableSize, int current_cycle){
    int oldest_cycle = current_cycle;
    int rsIndex = -1;
-   for(int i = 0; i < fuTableSize; i++){
+   for(int i = 0; i < rsTableSize; i++){
       // not in use
-      if(fuTable[i] == NULL)
+      if(rsTable[i] == NULL)
          continue;
       // if already done executing
-      if(fuTable[i] -> tom_execute_cycle < oldest_cycle){
-         oldest_cycle = fuTable[i] -> tom_execute_cycle;
+      if(rsTable[i] -> tom_execute_cycle < oldest_cycle){
+         oldest_cycle = rsTable[i] -> tom_execute_cycle;
          rsIndex = i;
       }  
    }
@@ -215,7 +254,7 @@ instruction_t *getOlder(instruction_t *a, instruction_t *b){
 void CDB_To_retire(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
-
+   
   // check all rs entries for something with execute cycle < current cycle: that means it's done
   // get the oldest one and put on CDB
   // free it's rs entry here as well
@@ -234,6 +273,8 @@ void CDB_To_retire(int current_cycle) {
 
    // there is a valid entry to broadcast
    if(reservEntryToBroadCast){
+      
+      commonDataBus = reservEntryToBroadCast;
       reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
    
       // go thru all rs entries and update if Qi Qj Qk has the same instr 
@@ -245,6 +286,7 @@ void CDB_To_retire(int current_cycle) {
             map_table[reservEntryToBroadCast -> r_out[i]] = NULL;
       }
    }
+
 }
 
 void setRSTagsToNull(instruction_t *instrToSearch){
@@ -302,8 +344,7 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
-
-
+   
    // because there's 3 fuINT: can execute at most 3
    for(int i = 0; i < FU_INT_SIZE; i++){
       // for each fu that's free: get an rs entry to execute
@@ -326,6 +367,7 @@ void execute_To_CDB(int current_cycle) {
          fuFP[0] = reservFpEntryToExecute;
       }
    }
+   
 
 }
 
@@ -362,6 +404,8 @@ void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
 
+   
+
    // If no RAW: which means that instr -> Q[i] is null for all i
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       if(reservINT[i] == NULL)
@@ -383,6 +427,7 @@ void issue_To_execute(int current_cycle) {
          reservFP[i] ->tom_issue_cycle = current_cycle;
       }  
    }
+   
 
 }
 
@@ -413,15 +458,20 @@ void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
     // case where no instruction in instruction queue: can't dispatch
-   if (IFQ -> head == IFQ -> tail){
-      return;
-   }
+
+  
 
    /*
    A fetched instruction can be dispatched (complete D) immediately if a reservation
    station entry will be available in the next cycle. Structural hazards on reservation
    stations are resolved here with stalls.
    */
+
+   
+   if (IFQ -> head == IFQ -> tail){
+      return;
+   }
+
    bool D_success = false;
    instruction_t* currInstr = IFQ->head->data;
    // check for structural hazard
@@ -465,7 +515,7 @@ void dispatch_To_issue(int current_cycle) {
       queuePop(IFQ);
    // if !D_success: stall so don't pop from queue cuz wanna retry when reservation
    // station needed is ready so don't update rs entry nor map table
-
+   
 }
 
 /* 
@@ -575,6 +625,10 @@ counter_t runTomasulo(instruction_trace_t* trace)
 //   for (i = 0; i < INSTR_QUEUE_SIZE; i++) {
 //     instr_queue[i] = NULL;
 //   }
+   IFQ = malloc(sizeof(Queue));
+   IFQ -> count = 0;
+   IFQ -> head = NULL;
+   IFQ -> tail = NULL;
 
   //initialize reservation stations
   for (i = 0; i < RESERV_INT_SIZE; i++) {
