@@ -110,8 +110,8 @@ typedef struct Node Node;
 
 struct Queue {
 	int count;
-	node *head;
-	node *tail;
+	Node *head;
+	Node *tail;
 };
 typedef struct Queue Queue;
 
@@ -142,7 +142,7 @@ bool queuePush(instruction_t *data, Queue *q){
 bool queuePop(Queue *q){
 	if(q -> count == 0)
 		return false;
-	node * nodeToDelete = q -> head;
+	Node * nodeToDelete = q -> head;
 	q -> head = q -> head -> next;
 	q -> count = q -> count - 1;
 	nodeToDelete -> next = NULL;
@@ -150,7 +150,7 @@ bool queuePop(Queue *q){
 	return true; 
 }
 
-static queue *IFQ;
+static Queue *IFQ;
 /* FUNCTIONAL UNITS */
 
 
@@ -175,18 +175,21 @@ static bool is_simulation_done(counter_t sim_insn) {
   return true; //ECE552: you can change this as needed; we've added this so the code provided to you compiles
 }
 
-/* 
- * Description: 
- * 	Retires the instruction from writing to the Common Data Bus
- * Inputs:
- * 	current_cycle: the cycle we are at
- * Returns:
- * 	None
- */
-void CDB_To_retire(int current_cycle) {
 
-  /* ECE552: YOUR CODE GOES HERE */
-
+int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
+   int oldest_cycle = current_cycle;
+   int rsIndex = -1;
+   for(int i = 0; i < fuTableSize; i++){
+      // not in use
+      if(fuTable[i] == NULL)
+         continue;
+      // if already done executing
+      if(fuTable[i] -> tom_execute_cycle < oldest_cycle){
+         oldest_cycle = fuTable[i] -> tom_execute_cycle;
+         rsIndex = i;
+      }  
+   }
+   return rsIndex;
 }
 
 instruction_t *getOlder(instruction_t *a, instruction_t *b){
@@ -200,8 +203,52 @@ instruction_t *getOlder(instruction_t *a, instruction_t *b){
       return b;
 }
 
-void setInputRegTagsToNull(instruction_t *instrToSearch){
-   // check int rs first
+/* 
+ * Description: 
+ * 	Retires the instruction from writing to the Common Data Bus
+ * Inputs:
+ * 	current_cycle: the cycle we are at
+ * Returns:
+ * 	None
+ */
+ // CDB stage
+void CDB_To_retire(int current_cycle) {
+
+  /* ECE552: YOUR CODE GOES HERE */
+
+  // check all rs entries for something with execute cycle < current cycle: that means it's done
+  // get the oldest one and put on CDB
+  // free it's rs entry here as well
+   instruction_t *reservEntryToBroadCast = NULL;
+
+   int reservIntIndexToBroadCast = -1;
+   reservIntIndexToBroadCast = getOldestRsToBroadcast(reservINT, RESERV_INT_SIZE, current_cycle);
+   int reservFPIndexToBroadCast = -1;
+   reservFPIndexToBroadCast = getOldestRsToBroadcast(reservFP, RESERV_FP_SIZE, current_cycle);
+
+   // this is a pointer to the reservation station
+   
+   reservEntryToBroadCast = (reservIntIndexToBroadCast == -1 && reservIntIndexToBroadCast == reservFPIndexToBroadCast) ? 
+      NULL: getOlder(reservINT[reservIntIndexToBroadCast], reservFP[reservFPIndexToBroadCast]);
+   
+
+   // there is a valid entry to broadcast
+   if(reservEntryToBroadCast){
+      reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
+   
+      // go thru all rs entries and update if Qi Qj Qk has the same instr 
+      setRSTagsToNull(reservEntryToBroadCast);
+
+      // update map table s.t. the output reg is now null
+      for(int i = 0; i < NUM_OUTPUT_REGS; i++){
+         if(reservEntryToBroadCast -> r_out[i] != DNA)
+            map_table[reservEntryToBroadCast -> r_out[i]] = NULL;
+      }
+   }
+}
+
+void setRSTagsToNull(instruction_t *instrToSearch){
+   // check all int rs first
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       // this reservation station entry is not in use
       if(reservINT[i] == NULL)
@@ -213,17 +260,34 @@ void setInputRegTagsToNull(instruction_t *instrToSearch){
       }
    }
 
-   // check fp rs now
+   // check all fp rs now
    for(int i = 0; i < RESERV_FP_SIZE; i++){
       // this reservation station entry is not in use
       if(reservFP[i] == NULL)
          continue;
       for(int j = 0; j < NUM_INPUT_REGS; j++){
-         if(RESERV_FP_SIZE[i] -> Q[j] == instrToSearch){
-            reservINT[i] -> Q[j] = NULL;
+         if(reservFP[i] -> Q[j] == instrToSearch){
+            reservFP[i] -> Q[j] = NULL;
          }
       }
    }
+}
+
+instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
+   int oldest_cycle = current_cycle;
+   instruction_t *oldestRSEntry = NULL;
+   for(int i = 0; i < rsTableSize; i++){
+      if(rsTable[i] == NULL)
+         continue;
+	   if(rsTable[i] -> tom_execute_cycle != -1)
+		   continue;  
+      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
+      if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
+         oldest_cycle = rsTable[i] ->tom_issue_cycle;
+         oldestRSEntry = rsTable[i];
+      }  
+   }
+   return oldestRSEntry;
 }
 
 /* 
@@ -234,43 +298,52 @@ void setInputRegTagsToNull(instruction_t *instrToSearch){
  * Returns:
  * 	None
  */
+ // EXECUTE STAGE
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
-  // check all rs entries for something with execute cycle < current cycle: that means it's done
-  // get the oldest one and put on CDB
-  // free it's rs entry here as well
-   instruction_t *reservEntryToBroadCast = NULL;
-   int reservIntIndexToBroadCast = -1;
-   reservIntIndexToBroadCast = getOldestRsToBroadcast(reservINT, RESERV_INT_SIZE, current_cycle);
-   int reservFPIndexToBroadCast = -1;
-   reservFPIndexToBroadCast = getOldestRsToBroadcast(reservFP, RESERV_FP_SIZE, current_cycle);
-
-   // this is a pointer to the reservation station
-   reservEntryToBroadCast = (reservIntIndexToBroadCast == reservFPIndexToBroadCast) ? 
-      NULL: getOlder(reservINT[reservIntIndexToBroadCast], reservFP[reservFPIndexToBroadCast]);
-   
-   reservEntryToBroadCast -> tom_cbd_cycle = current_cycle;
-   
-   // go thru all rs entries and update if Qi Qj Qk has the same instr 
-   setInputRegTagsToNull(reservEntryToBroadCast);
-
-   // TODO: clear the fp for the corresponding one
-
-   
 
 
-   // clear the rs that contains the current one to broadcast
-   reservEntryToBroadCast = NULL;
+   // because there's 3 fuINT: can execute at most 3
+   for(int i = 0; i < FU_INT_SIZE; i++){
+      // for each fu that's free: get an rs entry to execute
+      if(fuINT[i] == NULL){
+         instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
+         // there is something available to execute
+         if(reservIntEntryToExecute){
+            reservIntEntryToExecute -> tom_execute_cycle = current_cycle + FU_INT_LATENCY;
+            fuINT[i] = reservIntEntryToExecute;
+         }
+      }
+   }
+
+
+   // there's only 1 fuFP: so just check if it's null or not
+   if(fuFP[0] == NULL){
+      instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
+      if(reservFpEntryToExecute){
+         reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
+         fuFP[0] = reservFpEntryToExecute;
+      }
+   }
+
 }
 
 
-intruction_t *getFuAvail(instruction_t *fu[], int numFU){
+instruction_t *getFuAvail(instruction_t *fu[], int numFU){
    for(int i = 0; i < numFU; i++){
       if(fu[i] == NULL)
          return fu[i];
    }
    return NULL;
+}
+
+bool operandsReady(instruction_t *entry){
+   for(int i = 0; i < NUM_INPUT_REGS; i++){
+      if(entry -> Q[i] != NULL)
+         return false;
+   }
+   return true;
 }
 
 /* 
@@ -284,34 +357,32 @@ intruction_t *getFuAvail(instruction_t *fu[], int numFU){
  * 	None
  */
 
-// ENTER EXECUTE STAGE
+// ENTER ISSUE STAGE
 void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
-   // check those that have issued and have FU ready by checking reservation stations
-   //TODO: add a for loop to loop through every RS(3 entries):
-   instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
-   if(reservIntEntryToExecute){
-      // check if FU avail
-      instruction_t *fuINTToUse = getFuAvail(fuINT, FU_INT_SIZE);
-      if(fuINTToUse){
-         reservIntEntryToExecute -> tom_execute_cycle = current_cycle + FU_INT_LATENCY;
-	 fuINTToUse = reservIntEntryToExecute;
-	}
 
+   // If no RAW: which means that instr -> Q[i] is null for all i
+   for(int i = 0; i < RESERV_INT_SIZE; i++){
+      if(reservINT[i] == NULL)
+         continue;
+      if(reservINT[i] -> tom_issue_cycle != -1)
+         continue;
+      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
+      if(operandsReady(reservINT[i])){
+         reservINT[i] -> tom_issue_cycle = current_cycle;
+      }  
    }
 
-   instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
-   if(reservIntEntryToExecute){
-      // check if FU avail
-      instruction_t *fuFPToUse = getFuAvail(fuFP, FU_FP_SIZE) 
-      if(fuFPToUse){
-        reservFpEntryToExecute -> tom_execute_cycle = current_cycle + FU_FP_LATENCY;
-	fuFPToUse = reservFpEntryToExecute;
-      }
+   for(int i = 0; i < RESERV_FP_SIZE; i++){
+      if(reservFP[i] == NULL)
+         continue;
+      if(reservFP[i] -> tom_issue_cycle != -1)
+         continue;
+      if(operandsReady(reservFP[i])){
+         reservFP[i] ->tom_issue_cycle = current_cycle;
+      }  
    }
-
-
 
 }
 
@@ -325,62 +396,6 @@ int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
    return -1;
 }
 
-bool operandsReady(instruction_t *entry){
-   for(int i = 0; i < NUM_INPUT_REGS; i++){
-      if(entry -> Q[i] != NULL)
-         return false;
-   }
-   return true;
-}
-
-// issue the first that has been dispatched with all operands ready in reservation station
-instruction_t *getOldestRsToIssue(instruction_t *rsTable[], int rsTableSize, int current_cycle){
-   int oldest_cycle = current_cycle;
-   instruction_t *oldestRSEntry = NULL; 
-   for(int i = 0; i < rsTableSize; i++){
-      if(rsTable[i] == NULL)
-         continue;
-      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(operandsReady(rsTable[i]) && 
-         rsTable[i] -> tom_dispatch_cycle < oldest_cycle){
-         oldest_cycle = rsTable[i] ->tom_dispatch_cycle;
-         oldestRSEntry = rsTable[i];
-      }  
-   }
-   return oldestRSEntry;
-}
-
-instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
-   int oldest_cycle = current_cycle;
-   instruction_t *oldestRSEntry = NULL;
-   for(int i = 0; i < rsTableSize; i++){
-      if(rsTable[i] == NULL)
-         continue;
-	if(rsTable[i] -> tom_execute_cycle != -1)
-		continue;  
-      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
-         oldest_cycle = rsTable[i] ->tom_issue_cycle;
-         oldestRSEntry = rsTable[i];
-      }  
-   }
-   return oldestRSEntry;
-}
-
-int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int current_cycle){
-   int oldest_cycle = current_cycle;
-   int rsIndex = -1;
-   for(int i = 0; i < fuTableSize; i++){
-      if(fuTable[i] == NULL)
-         continue;
-      // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(fuTable[i] -> tom_execute_cycle < oldest_cycle){
-         oldest_cycle = fuTable[i] -> tom_execute_cycle;
-         rsIndex = i;
-      }  
-   }
-   return rsIndex;
-}
 
 /* 
  * Description: 
@@ -391,29 +406,66 @@ int getOldestRsToBroadcast(instruction_t *fuTable[], int fuTableSize, int curren
  * 	None
  */
 
-// ENTER ISSUE STAGE
+// DISPATCH STAGE
 // Main purpose: check if issuable: if source operands are ready(Q is all NULL)
 // can issue
-// TODO:issue in order (therefore issue the oldest dispatched insn), just
-// return the older one of fp and int
 void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
-   // If no RAW: issue
-
-   // check reservINT: get the oldest one
-   instruction_t *reservIntEntryToIssue = getOldestRsToIssue(reservINT, RESERV_INT_SIZE, current_cycle);
-   // NULL means that there's nothing ready to issue
-   if(reservIntEntryToIssue){
-      reservIntEntryToIssue.tom_issue_cycle = current_cycle;
+    // case where no instruction in instruction queue: can't dispatch
+   if (IFQ -> head == IFQ -> tail){
+      return;
    }
 
-   // check reservFP: get the oldest one
-   instruction_t *reservFpEntryToIssue = getOldestRsToIssue(reservFP, RESERV_FP_SIZE, current_cycle);
-   // NULL means there's nothing ready to issue
-   if(reservFpEntryToIssue){
-      reservFpEntryToIssue.tom_issue_cycle = current_cycle;
-   }  
+   /*
+   A fetched instruction can be dispatched (complete D) immediately if a reservation
+   station entry will be available in the next cycle. Structural hazards on reservation
+   stations are resolved here with stalls.
+   */
+   bool D_success = false;
+   instruction_t* currInstr = IFQ->head->data;
+   // check for structural hazard
+
+   enum md_opcode currOp = currInstr->op;
+
+   //OoO issue
+   //check from head to tail: the first available dispatched && has RS available
+   if(IS_UNCOND_CTRL(currOp) || IS_COND_CTRL(currOp)){
+      D_success = true;
+      currInstr->tom_dispatch_cycle = current_cycle;
+   }else if (USES_INT_FU(currOp)) {
+      //INT
+      // returns true if avail entry and entryToInsert is where to insert
+      // returns false if no entry avail
+      int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
+      if(indexToInsert != -1){
+         D_success = true;
+         reservINT[indexToInsert] = currInstr;
+         currInstr->tom_dispatch_cycle = current_cycle;
+         update_rs_entry(currInstr);
+         update_maptable(currInstr);
+      }
+   } else if (USES_FP_FU(currOp)) {
+      //FP
+
+      // returns true if avail entry and entryToInsert is where to insert
+      // returns false if no entry avail
+      int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
+      if(indexToInsert != -1){
+         D_success = true;
+         reservFP[indexToInsert] = currInstr;
+         currInstr->tom_dispatch_cycle = current_cycle;
+         update_rs_entry(currInstr);
+         update_maptable(currInstr);
+      } 
+   }
+   
+   // remove instruction from queue
+   if(D_success)
+      queuePop(IFQ);
+   // if !D_success: stall so don't pop from queue cuz wanna retry when reservation
+   // station needed is ready so don't update rs entry nor map table
+
 }
 
 /* 
@@ -430,33 +482,7 @@ void dispatch_To_issue(int current_cycle) {
 void fetch(instruction_trace_t* trace) {
   
    /* ECE552: YOUR CODE GOES HERE */
-   if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
-      return;
-   }
-
-   instruction_t *instr = NULL;
-   instr = get_instr(trace, fetch_index);
-   fetch_index++;
-   // if it is a trap instruction: get another instr
-   while (IS_TRAP(instr->op)) {
-      fetch_index++;
-      instr = get_instr(trace, fetch_index);
-   }
-
-   // this must be a non trap instruction: 
-   // it's valid to be pushed into instruction queue
-   bool instrInsertionSuccess = queuePush(instr, IFQ);
-
-   // that means that this instruction couldn't be inserted
-   // (either instr queue full or ran out of memory: try again)
-   if(!instrInsertionSuccess){
-      fetch_index--;
-   }else{
-	instr -> tom_dispatch_cycle = -1;
-	instr -> tom_issue_cycle = -1;
-	instr -> tom_execute_cycle = -1;
-	instr -> tom_cdb_cycle = -1;
-	} 
+  
 }
 
 /*
@@ -499,64 +525,36 @@ void update_maptable(instruction_t* currInstr){
  */
 // ENTER DISPATCH STAGE
 // Main purpose: 
+// TODO: dispatch one at a time
 void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
-   // case where no instruction in instruction queue: can't dispatch
-   if (IFQ -> head == IFQ -> tail){
+   if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
       return;
    }
- 
 
-   /*
-   A fetched instruction can be dispatched (complete D) immediately if a reservation
-   station entry will be available in the next cycle. Structural hazards on reservation
-   stations are resolved here with stalls.
-   */
-   bool D_success = false;
-   instruction_t* currInstr = IFQ->head->data;
-   // check for structural hazard
-
-   md_opcode currOp = currInstr->op;
-
-   //OoO issue
-   //check from head to tail: the first available dispatched && has RS available
-
-
-   if(IS_UNCOND_CTRL(currOp) || IS_COND_CTRL(currOp)){
-      D_success = true;
-      currInstr->tom_dispatch_cycle = current_cycle;
-   }else if (USES_INT_FU(currOp)) {
-      //INT
-      // returns true if avail entry and entryToInsert is where to insert
-      // returns false if no entry avail
-      int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
-      if(indexToInsert != -1){
-         D_success = true;
-         reservINT[indexToInsert] = currInstr;
-         currInstr->tom_dispatch_cycle = current_cycle;
-         update_rs_entry(currInstr);
-         update_maptable(currInstr);
-      }
-   } else if (USES_FP_FU(currOp)) {
-      //FP
-
-      // returns true if avail entry and entryToInsert is where to insert
-      // returns false if no entry avail
-      int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
-      if(indexToInsert  != -1){
-         D_success = true;
-         reservFP[indexToInsert] = currInstr;
-         currInstr->tom_dispatch_cycle = current_cycle;
-         update_rs_entry(currInstr);
-         update_maptable(currInstr);
-      } 
+   instruction_t *instr = NULL;
+   instr = get_instr(trace, fetch_index);
+   fetch_index++;
+   // if it is a trap instruction: get another instr
+   while (IS_TRAP(instr->op)) {
+      fetch_index++;
+      instr = get_instr(trace, fetch_index);
    }
-   
-   // remove instruction from queue
-   if(D_success)
-      queuePop(IFQ);
-   // if !D_success: stall so don't pop from queue cuz wanna retry when reservation
-   // station needed is ready so don't update rs entry nor map table
+
+   // this must be a non trap instruction: 
+   // it's valid to be pushed into instruction queue
+   bool instrInsertionSuccess = queuePush(instr, IFQ);
+
+   // that means that this instruction couldn't be inserted
+   // (either instr queue full or ran out of memory: try again)
+   if(!instrInsertionSuccess){
+      fetch_index--;
+   }else{
+      instr -> tom_dispatch_cycle = -1;
+      instr -> tom_issue_cycle = -1;
+      instr -> tom_execute_cycle = -1;
+      instr -> tom_cdb_cycle = -1;
+	} 
 }
 
 /* 
@@ -574,9 +572,9 @@ counter_t runTomasulo(instruction_trace_t* trace)
   
   //initialize instruction queue
   int i;
-  for (i = 0; i < INSTR_QUEUE_SIZE; i++) {
-    instr_queue[i] = NULL;
-  }
+//   for (i = 0; i < INSTR_QUEUE_SIZE; i++) {
+//     instr_queue[i] = NULL;
+//   }
 
   //initialize reservation stations
   for (i = 0; i < RESERV_INT_SIZE; i++) {
