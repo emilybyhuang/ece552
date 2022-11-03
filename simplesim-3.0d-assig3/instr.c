@@ -17,8 +17,8 @@ static void print_tom_instr(instruction_t* instr) {
 	    instr->tom_issue_cycle,
 	    instr->tom_execute_cycle,
 	    instr->tom_cdb_cycle);
-   myfprintf(stdout, "\t%d\n", 
-	    instr->index);
+   // myfprintf(stdout, "\t%d\n", 
+	//     instr->index);
 }
 
 
