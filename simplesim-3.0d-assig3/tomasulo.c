@@ -323,17 +323,30 @@ void CDB_To_retire(int current_cycle) {
       }
    }
 
+   // go through fu and free current occupied
+   for(int i = 0; i < FU_INT_SIZE; i++){
+      if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index)
+         fuINT[i] = NULL;
+   }
+
+   
+   if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
+      fuFP[0] = NULL;
+   
+
    // update map table s.t. the output reg is now null
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
       if(commonDataBus -> r_out[i] != DNA)
          map_table[commonDataBus -> r_out[i]] = NULL;
    }
 
+   
    commonDataBus = NULL;   
 
 }
 
 instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
+  
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL;
    for(int i = 0; i < rsTableSize; i++){
@@ -341,6 +354,8 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
          continue;
 	   if(rsTable[i] -> tom_execute_cycle != -1)
 		   continue;  
+      //printf("rsTable[i] -> tom_issue_cycle: %d\n", rsTable[i] -> tom_issue_cycle);
+
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle){
          oldest_cycle = rsTable[i] -> tom_issue_cycle;
@@ -385,20 +400,20 @@ void execute_To_CDB(int current_cycle) {
       commonDataBus = reservEntryToBroadCast;
       reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
    
-      // go thru all rs entries and update if Qi Qj Qk has the same instr 
-      setRSTagsToNull(reservEntryToBroadCast);
+      // // go thru all rs entries and update if Qi Qj Qk has the same instr 
+      // setRSTagsToNull(reservEntryToBroadCast);
 
-      // update map table s.t. the output reg is now null
-      for(int i = 0; i < NUM_OUTPUT_REGS; i++){
-         if(reservEntryToBroadCast -> r_out[i] != DNA)
-            map_table[reservEntryToBroadCast -> r_out[i]] = NULL;
-      }
+      // // update map table s.t. the output reg is now null
+      // for(int i = 0; i < NUM_OUTPUT_REGS; i++){
+      //    if(reservEntryToBroadCast -> r_out[i] != DNA)
+      //       map_table[reservEntryToBroadCast -> r_out[i]] = NULL;
+      // }
 
-      // reservation entry cleared
-      if(reservIntIndexToBroadCast != -1 && reservEntryToBroadCast -> index == reservINT[reservIntIndexToBroadCast] -> index)
-         reservINT[reservIntIndexToBroadCast] = NULL;
-      if(reservFpIndexToBroadCast != -1 && reservEntryToBroadCast -> index == reservFP[reservFpIndexToBroadCast] -> index)
-         reservFP[reservFpIndexToBroadCast] = NULL;
+      // // reservation entry cleared
+      // if(reservIntIndexToBroadCast != -1 && reservEntryToBroadCast -> index == reservINT[reservIntIndexToBroadCast] -> index)
+      //    reservINT[reservIntIndexToBroadCast] = NULL;
+      // if(reservFpIndexToBroadCast != -1 && reservEntryToBroadCast -> index == reservFP[reservFpIndexToBroadCast] -> index)
+      //    reservFP[reservFpIndexToBroadCast] = NULL;
       //reservINT[reservIntIndexToBroadCast] = NULL;
    }
    
@@ -469,7 +484,11 @@ void issue_To_execute(int current_cycle) {
       if(fuINT[i] == NULL){
          instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
          // there is something available to execute
-         if(reservIntEntryToExecute && reservIntEntryToExecute -> tom_issue_cycle != -1){
+         if(reservIntEntryToExecute)
+            
+            
+            //printf("Found something to execute\n");
+         if(reservIntEntryToExecute && operandsReady(reservIntEntryToExecute) && reservIntEntryToExecute -> tom_execute_cycle == -1){
             reservIntEntryToExecute -> tom_execute_cycle = current_cycle;
             fuINT[i] = reservIntEntryToExecute;
          }
@@ -480,7 +499,9 @@ void issue_To_execute(int current_cycle) {
    // there's only 1 fuFP: so just check if it's null or not
    if(fuFP[0] == NULL){
       instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
-      if(reservFpEntryToExecute && reservFpEntryToExecute -> tom_issue_cycle != -1){
+      if(reservFpEntryToExecute)
+         //printf("Found something to execute\n");
+      if(reservFpEntryToExecute && operandsReady(reservFpEntryToExecute) && reservFpEntryToExecute -> tom_execute_cycle == -1){
          reservFpEntryToExecute -> tom_execute_cycle = current_cycle;
          fuFP[0] = reservFpEntryToExecute;
       }
@@ -547,6 +568,9 @@ void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
    bool success = false;
+   // can't dispatch
+   if(IFQ -> head == NULL)
+      return;
    instruction_t* currInstr = IFQ->head->data;
    // check for structural hazard
 
@@ -670,6 +694,9 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
       fetch_index--;
    }else{
       instr->tom_dispatch_cycle = current_cycle;
+      instr->tom_issue_cycle = -1;
+      instr->tom_execute_cycle = -1;
+      instr->tom_cdb_cycle = -1;
 	} 
    //printf("Inserted instr index: %d into IFQ\n", instr -> index); 
 }
