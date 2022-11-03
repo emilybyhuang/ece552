@@ -186,7 +186,7 @@ static bool is_simulation_done(counter_t sim_insn) {
 
    // Check IFQ
    if(IFQ -> count != 0){
-      printf("IFQ not empty yet!\n");
+      //printf("IFQ not empty yet!\n");
       return false;
    }
 
@@ -321,8 +321,8 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    for(int i = 0; i < rsTableSize; i++){
       if(rsTable[i] == NULL)
          continue;
-	   if(rsTable[i] -> tom_execute_cycle != -1)
-		   continue;  
+	   // if(rsTable[i] -> tom_execute_cycle != -1)
+		//    continue;  
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(rsTable[i] -> tom_issue_cycle < oldest_cycle){
          oldest_cycle = rsTable[i] ->tom_issue_cycle;
@@ -410,8 +410,8 @@ void issue_To_execute(int current_cycle) {
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       if(reservINT[i] == NULL)
          continue;
-      if(reservINT[i] -> tom_issue_cycle != -1)
-         continue;
+      // if(reservINT[i] -> tom_issue_cycle != -1)
+      //    continue;
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
       if(operandsReady(reservINT[i])){
          reservINT[i] -> tom_issue_cycle = current_cycle;
@@ -427,8 +427,6 @@ void issue_To_execute(int current_cycle) {
          reservFP[i] ->tom_issue_cycle = current_cycle;
       }  
    }
-   
-
 }
 
 int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
@@ -459,16 +457,13 @@ void dispatch_To_issue(int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
     // case where no instruction in instruction queue: can't dispatch
 
-  
-
    /*
    A fetched instruction can be dispatched (complete D) immediately if a reservation
    station entry will be available in the next cycle. Structural hazards on reservation
    stations are resolved here with stalls.
    */
-
    
-   if (IFQ -> head == IFQ -> tail){
+   if (IFQ -> head == NULL){
       return;
    }
 
@@ -478,11 +473,9 @@ void dispatch_To_issue(int current_cycle) {
 
    enum md_opcode currOp = currInstr->op;
 
-   //OoO issue
    //check from head to tail: the first available dispatched && has RS available
    if(IS_UNCOND_CTRL(currOp) || IS_COND_CTRL(currOp)){
       D_success = true;
-      currInstr->tom_dispatch_cycle = current_cycle;
    }else if (USES_INT_FU(currOp)) {
       //INT
       // returns true if avail entry and entryToInsert is where to insert
@@ -491,7 +484,6 @@ void dispatch_To_issue(int current_cycle) {
       if(indexToInsert != -1){
          D_success = true;
          reservINT[indexToInsert] = currInstr;
-         currInstr->tom_dispatch_cycle = current_cycle;
          update_rs_entry(currInstr);
          update_maptable(currInstr);
       }
@@ -504,15 +496,19 @@ void dispatch_To_issue(int current_cycle) {
       if(indexToInsert != -1){
          D_success = true;
          reservFP[indexToInsert] = currInstr;
-         currInstr->tom_dispatch_cycle = current_cycle;
          update_rs_entry(currInstr);
          update_maptable(currInstr);
       } 
    }
    
    // remove instruction from queue
-   if(D_success)
+   if(D_success){
+      currInstr->tom_dispatch_cycle = current_cycle;
       queuePop(IFQ);
+   }
+
+   //printf("Dispatched instr: %d at cycle %d\n", currInstr -> index, current_cycle);
+      
    // if !D_success: stall so don't pop from queue cuz wanna retry when reservation
    // station needed is ready so don't update rs entry nor map table
    
@@ -573,9 +569,7 @@ void update_maptable(instruction_t* currInstr){
  * Returns:
  * 	None
  */
-// ENTER DISPATCH STAGE
-// Main purpose: 
-// TODO: dispatch one at a time
+// ENTER Fetch stage
 void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
    if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
@@ -583,8 +577,9 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    }
 
    instruction_t *instr = NULL;
-   instr = get_instr(trace, fetch_index);
    fetch_index++;
+   instr = get_instr(trace, fetch_index);
+   
    // if it is a trap instruction: get another instr
    while (IS_TRAP(instr->op)) {
       fetch_index++;
@@ -600,11 +595,12 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    if(!instrInsertionSuccess){
       fetch_index--;
    }else{
-      instr -> tom_dispatch_cycle = -1;
-      instr -> tom_issue_cycle = -1;
-      instr -> tom_execute_cycle = -1;
-      instr -> tom_cdb_cycle = -1;
+      // instr -> tom_dispatch_cycle = -1;
+      // instr -> tom_issue_cycle = -1;
+      // instr -> tom_execute_cycle = -1;
+      // instr -> tom_cdb_cycle = -1;
 	} 
+   //printf("Inserted instr index: %d into IFQ\n", instr -> index);
 }
 
 /* 
@@ -655,7 +651,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
   }
   
   /* ECE552: my code begin*/
-  fetch_index = 1;
+//   fetch_index = 1;
   initializeQueue(IFQ);
   /* ECE552: my code end*/
 
@@ -663,12 +659,19 @@ counter_t runTomasulo(instruction_trace_t* trace)
   while (true) {
 
      /* ECE552: YOUR CODE GOES HERE */
+      CDB_To_retire(cycle);
+      execute_To_CDB(cycle);
+      issue_To_execute(cycle);
+      dispatch_To_issue(cycle);
+      fetch_To_dispatch(trace, cycle);
 
      cycle++;
 
      if (is_simulation_done(sim_num_insn))
         break;
+     if (cycle == 1000)
+        print_all_instr(trace, sim_num_insn);
   }
-  
+  //print_all_instr(trace, sim_num_insn);
   return cycle;
 }
