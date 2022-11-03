@@ -308,17 +308,13 @@ void CDB_To_retire(int current_cycle) {
 
    // go through reservation station and find the matching one on CDB to clear
    for(int i = 0; i < RESERV_INT_SIZE; i++){
-      if(!reservINT[i])
-         continue;
-      if(reservINT[i] -> index == commonDataBus -> index){
+      if(reservINT[i] && reservINT[i] -> index == commonDataBus -> index){
          reservINT[i] = NULL;
       }
    }
 
    for(int i = 0; i < RESERV_FP_SIZE; i++){
-      if(!reservFP[i])
-         continue;
-      if(reservFP[i] -> index == commonDataBus -> index){
+      if(reservFP[i] && reservFP[i] -> index == commonDataBus -> index){
          reservFP[i] = NULL;
       }
    }
@@ -329,10 +325,8 @@ void CDB_To_retire(int current_cycle) {
          fuINT[i] = NULL;
    }
 
-   
    if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
       fuFP[0] = NULL;
-   
 
    // update map table s.t. the output reg is now null
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
@@ -340,13 +334,21 @@ void CDB_To_retire(int current_cycle) {
          map_table[commonDataBus -> r_out[i]] = NULL;
    }
 
-   
    commonDataBus = NULL;   
 
 }
 
+bool operandsReady(instruction_t *entry){
+   for(int i = 0; i < NUM_INPUT_REGS; i++){
+      // waiting for an instruction
+      if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL)
+         return false;
+   }
+   return true;
+}
+
+// get oldest that has been issued and operands ready
 instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
-  
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL;
    for(int i = 0; i < rsTableSize; i++){
@@ -357,7 +359,7 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
       //printf("rsTable[i] -> tom_issue_cycle: %d\n", rsTable[i] -> tom_issue_cycle);
 
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle){
+      if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle && operandsReady(rsTable[i])){
          oldest_cycle = rsTable[i] -> tom_issue_cycle;
          oldestRSEntry = rsTable[i];
       }  
@@ -374,6 +376,8 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
  * 	None
  */
  // EXECUTE STAGE
+ // TODO: Store just needs to remove rs, fu: no need to go to CDB
+//        cdb_cycle needs to be 0
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
@@ -454,14 +458,7 @@ instruction_t *getFuAvail(instruction_t *fu[], int numFU){
    return NULL;
 }
 
-bool operandsReady(instruction_t *entry){
-   for(int i = 0; i < NUM_INPUT_REGS; i++){
-      // waiting for an instruction
-      if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL)
-         return false;
-   }
-   return true;
-}
+
 
 /* 
  * Description: 
@@ -485,10 +482,9 @@ void issue_To_execute(int current_cycle) {
          instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
          // there is something available to execute
          if(reservIntEntryToExecute)
-            
-            
+    
             //printf("Found something to execute\n");
-         if(reservIntEntryToExecute && operandsReady(reservIntEntryToExecute) && reservIntEntryToExecute -> tom_execute_cycle == -1){
+         if(reservIntEntryToExecute && reservIntEntryToExecute -> tom_execute_cycle == -1){
             reservIntEntryToExecute -> tom_execute_cycle = current_cycle;
             fuINT[i] = reservIntEntryToExecute;
          }
@@ -501,7 +497,7 @@ void issue_To_execute(int current_cycle) {
       instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
       if(reservFpEntryToExecute)
          //printf("Found something to execute\n");
-      if(reservFpEntryToExecute && operandsReady(reservFpEntryToExecute) && reservFpEntryToExecute -> tom_execute_cycle == -1){
+      if(reservFpEntryToExecute && reservFpEntryToExecute -> tom_execute_cycle == -1){
          reservFpEntryToExecute -> tom_execute_cycle = current_cycle;
          fuFP[0] = reservFpEntryToExecute;
       }
@@ -589,6 +585,8 @@ void dispatch_To_issue(int current_cycle) {
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
+      }else{
+         printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    } else if (USES_FP_FU(currOp)) {
       //FP
@@ -602,7 +600,9 @@ void dispatch_To_issue(int current_cycle) {
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
-      } 
+      } else{
+         printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+      }
    }
    
    // remove instruction from queue
