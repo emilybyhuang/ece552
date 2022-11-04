@@ -104,7 +104,7 @@ static int fetch_index = 0;
 
 struct Node {
 	instruction_t *data;
-	struct node *next;
+	struct Node *next;
 };
 typedef struct Node Node;
 
@@ -182,7 +182,7 @@ static bool is_simulation_done(counter_t sim_insn) {
    /* ECE552: YOUR CODE GOES HERE */
 
    // Check if all data structures are empty
-   bool isFinished = false;
+   // bool isFinished = false;
 
    // Check IFQ
    if(IFQ -> count != 0){
@@ -301,23 +301,24 @@ void CDB_To_retire(int current_cycle) {
   // get the oldest one and put on CDB
   // free it's rs entry here as well
 
+   // that means there's nothing to retire
    if(!commonDataBus)
       return;
 
    setRSTagsToNull(commonDataBus);
 
    // go through reservation station and find the matching one on CDB to clear
-   for(int i = 0; i < RESERV_INT_SIZE; i++){
-      if(reservINT[i] && reservINT[i] -> index == commonDataBus -> index){
-         reservINT[i] = NULL;
-      }
-   }
+   // for(int i = 0; i < RESERV_INT_SIZE; i++){
+   //    if(reservINT[i] && reservINT[i] -> index == commonDataBus -> index){
+   //       reservINT[i] = NULL;
+   //    }
+   // }
 
-   for(int i = 0; i < RESERV_FP_SIZE; i++){
-      if(reservFP[i] && reservFP[i] -> index == commonDataBus -> index){
-         reservFP[i] = NULL;
-      }
-   }
+   // for(int i = 0; i < RESERV_FP_SIZE; i++){
+   //    if(reservFP[i] && reservFP[i] -> index == commonDataBus -> index){
+   //       reservFP[i] = NULL;
+   //    }
+   // }
 
    // go through fu and free current occupied
    for(int i = 0; i < FU_INT_SIZE; i++){
@@ -403,6 +404,42 @@ void execute_To_CDB(int current_cycle) {
       
       commonDataBus = reservEntryToBroadCast;
       reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
+      // setRSTagsToNull(commonDataBus);
+
+      // go through reservation station and find the matching one on CDB to clear
+      for(int i = 0; i < RESERV_INT_SIZE; i++){
+         if(reservINT[i] && reservINT[i] -> index == reservEntryToBroadCast -> index){
+            printf("Freeing rs int entry: %d\n", i);
+            reservINT[i] = NULL;
+         }
+      }
+
+      for(int i = 0; i < RESERV_FP_SIZE; i++){
+         if(reservFP[i] && reservFP[i] -> index == reservEntryToBroadCast -> index){
+            printf("Freeing rs fp entry: %d\n", i);
+            reservFP[i] = NULL;
+         }
+      }
+
+      // for(int i = 0; i < FU_INT_SIZE; i++){
+      //    if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index)
+      //       fuINT[i] = NULL;
+      // }
+
+      // if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
+      //    fuFP[0] = NULL;
+
+      // for(int i = 0; i < NUM_OUTPUT_REGS; i++){
+      //    if(commonDataBus -> r_out[i] != DNA)
+      //       map_table[commonDataBus -> r_out[i]] = NULL;
+      // }
+
+      // // update map table s.t. the output reg is now null
+      // for(int i = 0; i < NUM_OUTPUT_REGS; i++){
+      //    if(commonDataBus -> r_out[i] != DNA)
+      //       map_table[commonDataBus -> r_out[i]] = NULL;
+      // }
+
    
       // // go thru all rs entries and update if Qi Qj Qk has the same instr 
       // setRSTagsToNull(reservEntryToBroadCast);
@@ -579,14 +616,16 @@ void dispatch_To_issue(int current_cycle) {
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
+      printf("rs int index free to insert: %d", indexToInsert);
       if(indexToInsert != -1){
+         printf("using rs int entry %d for instr index %d", indexToInsert, currInstr -> index);
          success = true;
          reservINT[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
       }else{
-         printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+         //printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    } else if (USES_FP_FU(currOp)) {
       //FP
@@ -594,14 +633,16 @@ void dispatch_To_issue(int current_cycle) {
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
+      printf("rs fp index free to insert: %d", indexToInsert);
       if(indexToInsert != -1){
+         printf("using rs fp entry %d for instr index %d", indexToInsert, currInstr -> index);
          success = true;
          reservFP[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
       } else{
-         printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+        //printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    }
    
