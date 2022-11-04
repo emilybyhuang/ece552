@@ -225,6 +225,7 @@ static bool is_simulation_done(counter_t sim_insn) {
 int getOldestRsToBroadcast(instruction_t *rsTable[], int rsTableSize, int current_cycle){
    int oldest_cycle = current_cycle;
    int rsIndex = -1;
+   printReservationTable(current_cycle);
    for(int i = 0; i < rsTableSize; i++){
       // not in use
       if(rsTable[i] == NULL)
@@ -241,7 +242,8 @@ int getOldestRsToBroadcast(instruction_t *rsTable[], int rsTableSize, int curren
             latency = FU_FP_LATENCY;
          }
          int cycle_done = rsTable[i] -> tom_execute_cycle + latency - 1;
-      
+         printf("\n\nCycle done is %d for instr index: %d\n", cycle_done, rsTable[i] -> index);
+
          // if already done executing
          if(cycle_done < oldest_cycle){
             oldest_cycle = cycle_done;
@@ -320,8 +322,10 @@ void CDB_To_retire(int current_cycle) {
 
    // go through fu and free current occupied
    for(int i = 0; i < FU_INT_SIZE; i++){
-      if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index)
+      if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index) {
          fuINT[i] = NULL;
+         printf("FU_INT[%d] is freed at cycle %d\n", i, current_cycle);
+      }
    }
 
    if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
@@ -380,6 +384,28 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    return oldestRSEntry;
 }
 
+void freeFuRSForStoreDone(int current_cycle){
+   // check for store that's done
+   for(int i = 0; i < FU_INT_SIZE; i++){
+      if(fuINT[i] && IS_STORE(fuINT[i] -> op) && fuINT[i] -> tom_execute_cycle != -1){
+         int latency = FU_INT_LATENCY;
+         
+         int cycle_done = fuINT[i]  -> tom_execute_cycle + latency - 1;
+         if(cycle_done < current_cycle){
+            fuINT[i] -> tom_cdb_cycle = 0;
+            
+
+            // free rs for this entry
+            for(int j = 0; j < RESERV_INT_SIZE; j++){
+               if(reservINT[j] && reservINT[j] -> index == fuINT[i] -> index)
+                  reservINT[j] = NULL;
+            }
+            fuINT[i] = NULL;
+         }
+      }
+   }
+}
+
 /* 
  * Description: 
  * 	Moves an instruction from the execution stage to common data bus (if possible)
@@ -394,9 +420,10 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
+  
+   freeFuRSForStoreDone(current_cycle);
 
    instruction_t *reservEntryToBroadCast = NULL;
-   instruction_t **ptrToEntryToBroadCast = NULL;
 
    int reservIntIndexToBroadCast = getOldestRsToBroadcast(reservINT, RESERV_INT_SIZE, current_cycle);
    int reservFpIndexToBroadCast = getOldestRsToBroadcast(reservFP, RESERV_FP_SIZE, current_cycle);
@@ -413,27 +440,8 @@ void execute_To_CDB(int current_cycle) {
 
    // there is a valid entry to broadcast
    if(reservEntryToBroadCast && reservEntryToBroadCast -> tom_cdb_cycle == -1){
-
-      // Special case: if the op code is store: then no need for CDB
-      enum md_opcode currOp = reservEntryToBroadCast->op;
-      if(IS_STORE(currOp)){
-         reservEntryToBroadCast -> tom_cdb_cycle = 0;
-         // empty fu that matches current one
-         for(int i = 0; i < FU_INT_SIZE; i++){
-            if(fuINT[i] && fuINT[i] -> index == reservEntryToBroadCast -> index)
-               fuINT[i] = NULL;
-         }
-
-         for(int i = 0; i < FU_FP_SIZE; i++){
-            if(fuFP[i] && fuFP[i] -> index == reservEntryToBroadCast -> index)
-               fuFP[i] = NULL;
-         }
-      }else{
-         commonDataBus = reservEntryToBroadCast;
-         reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
-      }
-
-
+      commonDataBus = reservEntryToBroadCast;
+      reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
       
       // commonDataBus = reservEntryToBroadCast;
       // reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
@@ -454,7 +462,6 @@ void execute_To_CDB(int current_cycle) {
          }
       }
    }
-
 }
 
 
