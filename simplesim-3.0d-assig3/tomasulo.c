@@ -132,10 +132,13 @@ bool queuePush(instruction_t *data, Queue *q){
 	if(node == NULL) return false;
 	node -> data = data;
 	node -> next = NULL;
-	if(q -> head == NULL){
-		q -> head = node;
-	}
-	q -> tail = node;	
+   if (q->count == 0) {
+      q->head = node;
+      q->tail = node;
+   } else {
+      q->tail->next = node;
+      q->tail = node;
+   }
 	q -> count = q -> count + 1;
 	return true;
 }
@@ -146,7 +149,9 @@ bool queuePop(Queue *q){
 	Node * nodeToDelete = q -> head;
 	q -> head = q -> head -> next;
 	q -> count = q -> count - 1;
-	nodeToDelete -> next = NULL;
+	if (q->count == 0) {
+      q->head = q->tail = NULL;
+   }
 	free(nodeToDelete);
 	return true; 
 }
@@ -602,8 +607,12 @@ void dispatch_To_issue(int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
    bool success = false;
    // can't dispatch
-   if(IFQ -> head == NULL)
+   if(IFQ -> head == NULL){
+      printf("!!!!Nothing in ifq now\n");
       return;
+   }
+
+      
    instruction_t* currInstr = IFQ->head->data;
    // check for structural hazard
 
@@ -616,16 +625,16 @@ void dispatch_To_issue(int current_cycle) {
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
-      printf("rs int index free to insert: %d", indexToInsert);
+      printf("current instr index: %d rs int index free to insert: %d\n", currInstr -> index, indexToInsert);
       if(indexToInsert != -1){
-         printf("using rs int entry %d for instr index %d", indexToInsert, currInstr -> index);
+         printf("using rs int entry %d for instr index %d\n", indexToInsert, currInstr -> index);
          success = true;
          reservINT[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
       }else{
-         //printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+         printf("\nindex: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    } else if (USES_FP_FU(currOp)) {
       //FP
@@ -633,16 +642,16 @@ void dispatch_To_issue(int current_cycle) {
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
-      printf("rs fp index free to insert: %d", indexToInsert);
+      printf("rs fp index free to insert: %d\n", indexToInsert);
       if(indexToInsert != -1){
-         printf("using rs fp entry %d for instr index %d", indexToInsert, currInstr -> index);
+         printf("using rs fp entry %d for instr index %d\n", indexToInsert, currInstr -> index);
          success = true;
          reservFP[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
       } else{
-        //printf("index: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+        //printf("\nindex: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    }
    
@@ -727,6 +736,7 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
 
    // this must be a non trap instruction: 
    // it's valid to be pushed into instruction queue
+   printf("\n---lzh: index: %d---\n", instr->index);
    bool instrInsertionSuccess = queuePush(instr, IFQ);
 
    // that means that this instruction couldn't be inserted
