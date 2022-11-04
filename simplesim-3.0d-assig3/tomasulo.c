@@ -344,11 +344,14 @@ void CDB_To_retire(int current_cycle) {
 
 }
 
-bool operandsReady(instruction_t *entry){
+bool operandsReady(instruction_t *entry,int current_cycle){
+   printf("Checking instr: %d @ cycle %d to see if operands ready\n", entry -> index, current_cycle);
    for(int i = 0; i < NUM_INPUT_REGS; i++){
       // waiting for an instruction
-      if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL)
+      if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL){
+         printf("Operand index: %d not ready\n\n", i);
          return false;
+      }
    }
    return true;
 }
@@ -360,12 +363,14 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    for(int i = 0; i < rsTableSize; i++){
       if(rsTable[i] == NULL)
          continue;
+
+      // already has something that's executing
 	   if(rsTable[i] -> tom_execute_cycle != -1)
 		   continue;  
       //printf("rsTable[i] -> tom_issue_cycle: %d\n", rsTable[i] -> tom_issue_cycle);
 
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle && operandsReady(rsTable[i])){
+      if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle && operandsReady(rsTable[i], current_cycle)){
          oldest_cycle = rsTable[i] -> tom_issue_cycle;
          oldestRSEntry = rsTable[i];
       }  
@@ -406,9 +411,21 @@ void execute_To_CDB(int current_cycle) {
 
    // there is a valid entry to broadcast
    if(reservEntryToBroadCast && reservEntryToBroadCast -> tom_cdb_cycle == -1){
+
+      // Special case: if the op code is store: then no need for CDB
+      enum md_opcode currOp = reservEntryToBroadCast->op;
+      if(IS_STORE(currOp)){
+         
+         reservEntryToBroadCast -> tom_cdb_cycle = 0;
+      }else{
+         commonDataBus = reservEntryToBroadCast;
+         reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
+      }
+
+
       
-      commonDataBus = reservEntryToBroadCast;
-      reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
+      // commonDataBus = reservEntryToBroadCast;
+      // reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
       // setRSTagsToNull(commonDataBus);
 
       // go through reservation station and find the matching one on CDB to clear
@@ -517,15 +534,18 @@ instruction_t *getFuAvail(instruction_t *fu[], int numFU){
 void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
+   
+   
    // because there's 3 fuINT: can execute at most 3
    for(int i = 0; i < FU_INT_SIZE; i++){
       // for each fu that's free: get an rs entry to execute
       if(fuINT[i] == NULL){
          instruction_t *reservIntEntryToExecute = getOldestRsToExecute(reservINT, RESERV_INT_SIZE, current_cycle);
+         
+         
          // there is something available to execute
          if(reservIntEntryToExecute)
-    
-            //printf("Found something to execute\n");
+            printf("fu int, trying to execute instr index %d\n", reservIntEntryToExecute -> index);
          if(reservIntEntryToExecute && reservIntEntryToExecute -> tom_execute_cycle == -1){
             reservIntEntryToExecute -> tom_execute_cycle = current_cycle;
             fuINT[i] = reservIntEntryToExecute;
@@ -537,8 +557,10 @@ void issue_To_execute(int current_cycle) {
    // there's only 1 fuFP: so just check if it's null or not
    if(fuFP[0] == NULL){
       instruction_t *reservFpEntryToExecute = getOldestRsToExecute(reservFP, RESERV_FP_SIZE, current_cycle);
+      
+      
       if(reservFpEntryToExecute)
-         //printf("Found something to execute\n");
+         printf("fu fp, trying to execute instr index %d\n", reservFpEntryToExecute -> index);
       if(reservFpEntryToExecute && reservFpEntryToExecute -> tom_execute_cycle == -1){
          reservFpEntryToExecute -> tom_execute_cycle = current_cycle;
          fuFP[0] = reservFpEntryToExecute;
@@ -618,23 +640,28 @@ void dispatch_To_issue(int current_cycle) {
 
    enum md_opcode currOp = currInstr->op;
 
+   // for branches: issue, execute, and cdb are all 0 
    if(IS_UNCOND_CTRL(currOp) || IS_COND_CTRL(currOp)){
-      success = true;
+      currInstr -> tom_issue_cycle = 0;
+      currInstr -> tom_execute_cycle = 0;
+      currInstr -> tom_cdb_cycle = 0;
+      queuePop(IFQ);
+      return;
    }else if (USES_INT_FU(currOp)) {
       //INT
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
-      printf("current instr index: %d rs int index free to insert: %d\n", currInstr -> index, indexToInsert);
+      //printf("current instr index: %d rs int index free to insert: %d\n", currInstr -> index, indexToInsert);
       if(indexToInsert != -1){
-         printf("using rs int entry %d for instr index %d\n", indexToInsert, currInstr -> index);
+         //printf("using rs int entry %d for instr index %d\n", indexToInsert, currInstr -> index);
          success = true;
          reservINT[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
          //printf("current cycle update rs %d at cycle %d\n", indexToInsert, current_cycle);
          update_maptable(currInstr);
       }else{
-         printf("\nindex: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
+         //printf("\nindex: %d No rs current cycle: %d\n", currInstr -> index, current_cycle);
       }
    } else if (USES_FP_FU(currOp)) {
       //FP
@@ -642,9 +669,9 @@ void dispatch_To_issue(int current_cycle) {
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
-      printf("rs fp index free to insert: %d\n", indexToInsert);
+      //printf("rs fp index free to insert: %d\n", indexToInsert);
       if(indexToInsert != -1){
-         printf("using rs fp entry %d for instr index %d\n", indexToInsert, currInstr -> index);
+         //printf("using rs fp entry %d for instr index %d\n", indexToInsert, currInstr -> index);
          success = true;
          reservFP[indexToInsert] = currInstr;
          update_rs_entry(currInstr);
@@ -818,7 +845,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
 
      if (is_simulation_done(sim_num_insn))
         break;
-     if (cycle == 30){
+     if (cycle == 100){
         print_all_instr(trace, sim_num_insn);
         break;
      }
