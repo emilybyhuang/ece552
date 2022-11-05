@@ -319,16 +319,16 @@ void CDB_To_retire(int current_cycle) {
 
    setRSTagsToNull(commonDataBus);
 
-   // go through fu and free current occupied
-   for(int i = 0; i < FU_INT_SIZE; i++){
-      if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index) {
-         fuINT[i] = NULL;
-         printf("FU_INT[%d] is freed at cycle %d\n", i, current_cycle);
-      }
-   }
+   // // go through fu and free current occupied
+   // for(int i = 0; i < FU_INT_SIZE; i++){
+   //    if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index) {
+   //       fuINT[i] = NULL;
+   //       printf("FU_INT[%d] is freed at cycle %d\n", i, current_cycle);
+   //    }
+   // }
 
-   if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
-      fuFP[0] = NULL;
+   // if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
+   //    fuFP[0] = NULL;
 
    // update map table s.t. the output reg is now null
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
@@ -460,6 +460,16 @@ void execute_To_CDB(int current_cycle) {
             reservFP[i] = NULL;
          }
       }
+      // go through fu and free current occupied
+      for(int i = 0; i < FU_INT_SIZE; i++){
+         if(fuINT[i] && fuINT[i] -> index == commonDataBus -> index) {
+            fuINT[i] = NULL;
+            printf("FU_INT[%d] is freed at cycle %d\n", i, current_cycle);
+         }
+      }
+
+      if(fuFP[0] && fuFP[0] -> index == commonDataBus -> index)
+         fuFP[0] = NULL;
    }
 }
 
@@ -721,13 +731,13 @@ void printReservationTable(int current_cycle){
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       if(reservINT[i] != NULL){
          printf("reservINT index: %d, instr index in it: %d\n", i, reservINT[i] -> index);
-         // for(int j = 0; j < NUM_INPUT_REGS; j++){
-         //    if(reservINT[i] -> Q[j] == NULL){
-         //       printf("Q[%d] == NULL\n", j);
-         //    }else{
-         //       printf("Q[%d] points to instr %d\n", reservINT[i] -> Q[j] -> index);
-         //    }
-         // }
+         for(int j = 0; j < NUM_INPUT_REGS; j++){
+            if(reservINT[i] -> Q[j] == NULL){
+               printf("Q[%d] == NULL\n", j);
+            }else{
+               printf("Q[%d] points to instr %d\n", j, reservINT[i] -> Q[j] -> index);
+            }
+         }
       }
    }
 
@@ -807,7 +817,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
 
      if (is_simulation_done(sim_num_insn))
         break;
-     if (cycle == 50){
+     if (cycle == 100){
         print_all_instr(trace, sim_num_insn);
         break;
      }
