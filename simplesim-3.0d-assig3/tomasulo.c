@@ -825,7 +825,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
 
      //if (is_simulation_done(sim_num_insn))
      //   break;
-     if (cycle == 50) break;
+   if (cycle == 50000) break;
    //   if (cycle == 100){
    //      print_all_instr(trace, sim_num_insn);
    //      print_all_instr_csv
@@ -834,6 +834,6 @@ counter_t runTomasulo(instruction_trace_t* trace)
   }
   //print_all_instr(trace, sim_num_insn);
   //print_all_instr_csv(trace, sim_num_insn);
-  print_all_instr_csv(trace, 50);
+  print_all_instr_csv(trace, 1000);
   return cycle;
 }
