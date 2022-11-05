@@ -82,6 +82,7 @@
 
 // We decided to use a linked list for the instruction fetch queue: no need for these now
 //instruction queue for tomasulo
+
 // static instruction_t* instr_queue[INSTR_QUEUE_SIZE];
 //number of instructions in the instruction queue
 // static int instr_queue_size = 0;
@@ -427,7 +428,7 @@ void CDB_To_retire(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
    
-   // printf("\n\n\nEnterrring retire\n");
+   // printf("\n\nEnterrring retire\n");
    // printFU(current_cycle);
    // printReservationTable(current_cycle);
 
@@ -459,15 +460,12 @@ bool operandsReady(instruction_t *entry,int current_cycle){
 
 // get oldest that has been issued and operands ready
 instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
-   //printf("\n\nTTTrying to find something to execute at cycle: %d\n", current_cycle);
    int instrIndex = INT_MAX;
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL;
    for(int i = 0; i < rsTableSize; i++){
       if(rsTable[i] == NULL)
          continue;
-
-      //printf("IIIIInstr %d in reservation table\n", rsTable[i] -> index);
 
       // already has something that's executing
 	   if(rsTable[i] -> tom_execute_cycle != -1)
@@ -497,11 +495,11 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
 //        cdb_cycle needs to be 0
 void execute_To_CDB(int current_cycle) {
 
-  /* ECE552: YOUR CODE GOES HERE */
+   /* ECE552: YOUR CODE GOES HERE */
    // printf("\n\n\nEnterring CDB\n");
-   freeFuRSForStoreDone(current_cycle);
    // printReservationTable(current_cycle);
    // printFU(current_cycle);
+   freeFuRSForStoreDone(current_cycle);
 
    instruction_t *reservEntryToBroadCast = NULL;
 
@@ -565,7 +563,7 @@ void execute_To_CDB(int current_cycle) {
 void issue_To_execute(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
-   // printf("\n\n\nEnterring execute:\n");
+   // printf("\n\nEnterring execute:\n");
    // printReservationTable(current_cycle);
    // printFU(current_cycle);
    
@@ -591,7 +589,6 @@ void issue_To_execute(int current_cycle) {
          fuFP[0] = reservFpEntryToExecute;
       }
    }
-   // printReservationTable(current_cycle); 
 }
 
 /* 
@@ -609,8 +606,11 @@ void issue_To_execute(int current_cycle) {
 void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
-   // printf("\n\nEnterring dispatch\n");
+   // printf("\n\nEnterring issue\n");
    
+   // printReservationTable(current_cycle);
+   // printFU(current_cycle);
+
    bool success = false;
    // can't dispatch
    if(IFQ -> head == NULL){
@@ -618,8 +618,6 @@ void dispatch_To_issue(int current_cycle) {
    }
   
    instruction_t* currInstr = IFQ->head->data;
-   // check for structural hazard
-
    enum md_opcode currOp = currInstr->op;
 
    // for branches: issue, execute, and cdb are all 0 
@@ -628,10 +626,9 @@ void dispatch_To_issue(int current_cycle) {
       currInstr -> tom_execute_cycle = 0;
       currInstr -> tom_cdb_cycle = 0;
       queuePop(IFQ);
-      // printReservationTable(current_cycle);
       return;
    }else if (USES_INT_FU(currOp)) {
-      //INT
+      // INT
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservINT, RESERV_INT_SIZE);
@@ -643,8 +640,7 @@ void dispatch_To_issue(int current_cycle) {
          update_maptable(currInstr);
       }
    } else if (USES_FP_FU(currOp)) {
-      //FP
-
+      // FP
       // returns true if avail entry and entryToInsert is where to insert
       // returns false if no entry avail
       int indexToInsert = getFreeReservationEntry(reservFP, RESERV_FP_SIZE);
@@ -662,7 +658,6 @@ void dispatch_To_issue(int current_cycle) {
       currInstr->tom_issue_cycle = current_cycle;
       queuePop(IFQ);
    }
-   // printReservationTable(current_cycle);
 }
 
 /* 
@@ -693,7 +688,11 @@ void fetch(instruction_trace_t* trace) {
  * 	None
  */
 void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
+
    /* ECE552: YOUR CODE GOES HERE */
+   // printf("\n\nEnterring dispatch\n");
+   // printReservationTable(current_cycle);
+   // printFU(current_cycle);
    if (isQueueFull(IFQ)) {
       return;
    }
@@ -785,18 +784,11 @@ counter_t runTomasulo(instruction_trace_t* trace)
       dispatch_To_issue(cycle);
       fetch_To_dispatch(trace, cycle);
       
-      
       if (is_simulation_done(sim_num_insn))
-        break;
-      // if (cycle == 1695063)
-      //    is_simulation_done(sim_num_insn);
-         //break;
-      // if (cycle == 1695064)
-      //    break;
+         break;
       cycle++;
    }
    is_simulation_done(sim_num_insn);
-   print_all_instr(trace, sim_num_insn);
-
+   // print_all_instr(trace, sim_num_insn);
    return cycle;
 }
