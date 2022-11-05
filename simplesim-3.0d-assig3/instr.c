@@ -52,7 +52,7 @@ void print_all_instr_csv(instruction_trace_t* trace, int sim_num_insn) {
   FILE *fpt;
   fpt = fopen("myoutput.csv", "w+");
 
-  fprintf(fpt, "\t%s\t%s\t%s\t%s\t%s\n","index", "dispatch", "issue", "execute", "cdb");
+  fprintf(fpt, "%s\t%s\t%s\t%s\t%s\n","index", "dispatch", "issue", "execute", "cdb");
    //....
   int printed_count = 0;
   int index = 1;
@@ -61,7 +61,7 @@ void print_all_instr_csv(instruction_trace_t* trace, int sim_num_insn) {
          instruction_t* instr;
          instr = &trace->table[index];
          //md_print_insn(instr->inst, instr->pc, stdout);
-         fprintf(fpt, "\t%d\t%d\t%d\t%d\t%d\n", 
+         fprintf(fpt, "%d\t%d\t%d\t%d\t%d\n", 
                instr->index,
                instr->tom_dispatch_cycle,
                instr->tom_issue_cycle,
