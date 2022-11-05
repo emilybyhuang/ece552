@@ -127,10 +127,16 @@ bool isQueueFull(Queue *q){
 }
 
 bool queuePush(instruction_t *data, Queue *q){
-	if(isQueueFull(q))return false;
+	if(isQueueFull(q)){
+      printf("Queue is full\n\n\n");
+      return false;
+   }
 	Node * node = malloc(sizeof(Node));
    // can't allocate cuz out of memory
-	if(node == NULL) return false;
+	if(node == NULL){
+      printf("Can't malloc\n\n\n");
+      return false;
+   }
 	node -> data = data;
 	node -> next = NULL;
    if (q->count == 0) {
@@ -325,6 +331,14 @@ void freeFuRSForStoreDone(int current_cycle){
    }
 }
 
+void printIFQ(Queue *q){
+   Node *curr = q -> head;
+   while(curr){
+      printf("ifq index: %d\n", curr -> data ->index);
+      curr = curr -> next;
+   }
+   return;
+}
 
 /* 
  * Description: 
@@ -344,36 +358,44 @@ static bool is_simulation_done(counter_t sim_insn) {
 
    // Check IFQ
    if(IFQ -> count != 0){
+      // printf("ifq not empty\n");
+      // printIFQ(IFQ);
+      // printf("Queue size: %d\n", IFQ -> count);
       return false;
    }
 
    // Check RS
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       if(reservINT[i] != NULL){
+         //printf("reservint not empty\n");
          return false;
       }
    }
 
    for(int i = 0; i < RESERV_FP_SIZE; i++){
       if(reservFP[i] != NULL){
+         //printf("reservfp not empty\n");
          return false;
       }
    }
 
    // Check CDB
    if(commonDataBus != NULL){
+      //printf("cdb not empty\n");
       return false;
    }
 
    // Check FU
    for(int i = 0; i < FU_INT_SIZE; i++){
       if(fuINT[i] != NULL){
+         //printf("fuint not empty\n");
          return false;
       }
    }
 
    for(int i = 0; i < FU_FP_SIZE; i++){
       if(fuFP[i] != NULL){
+         //printf("fufp not empty\n");
          return false;
       }
    }
@@ -672,12 +694,17 @@ void fetch(instruction_trace_t* trace) {
  */
 void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
-   if (fetch_index >= INSTR_TRACE_SIZE || isQueueFull(IFQ)) {
+   if (isQueueFull(IFQ)) {
       return;
    }
 
    instruction_t *instr = NULL;
    fetch_index++;
+
+   // no more instructions to fetch case
+   if (fetch_index > sim_num_insn)
+      return;
+
    instr = get_instr(trace, fetch_index);
    
    // if it is a trap instruction: get another instr
@@ -751,7 +778,6 @@ counter_t runTomasulo(instruction_trace_t* trace)
    /* ECE552: my code end*/
 
    while (true) {
-
      /* ECE552: YOUR CODE GOES HERE */
       CDB_To_retire(cycle);
       execute_To_CDB(cycle);
@@ -759,9 +785,18 @@ counter_t runTomasulo(instruction_trace_t* trace)
       dispatch_To_issue(cycle);
       fetch_To_dispatch(trace, cycle);
       
+      
+      if (is_simulation_done(sim_num_insn))
+        break;
+      // if (cycle == 1695063)
+      //    is_simulation_done(sim_num_insn);
+         //break;
+      // if (cycle == 1695064)
+      //    break;
       cycle++;
    }
-   print_all_instr_csv(trace, sim_num_insn);
+   is_simulation_done(sim_num_insn);
+   print_all_instr(trace, sim_num_insn);
 
    return cycle;
 }

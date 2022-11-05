@@ -30,7 +30,8 @@ void print_all_instr(instruction_trace_t* trace, int sim_num_insn) {
   while (true) {
  
      if (1) { // if (printed_count > 9999900) {
-        print_tom_instr(&trace->table[index]);
+         if(printed_count > 999900)
+            print_tom_instr(&trace->table[index]);
      }
 
      printed_count++;
