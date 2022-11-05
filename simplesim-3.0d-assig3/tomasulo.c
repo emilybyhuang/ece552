@@ -200,22 +200,32 @@ static bool is_simulation_done(counter_t sim_insn) {
    // Check RS
    for(int i = 0; i < RESERV_INT_SIZE; i++){
       if(reservINT[i] != NULL){
-         //printf("RS INT entry not empty yet!\n");
          return false;
       }
    }
 
    for(int i = 0; i < RESERV_FP_SIZE; i++){
       if(reservFP[i] != NULL){
-         printf("RS FP entry not empty yet!\n");
          return false;
       }
    }
 
    // Check CDB
    if(commonDataBus != NULL){
-      printf("CDB not empty yet!\n");
       return false;
+   }
+
+   // Check FU
+   for(int i = 0; i < FU_INT_SIZE; i++){
+      if(fuINT[i] != NULL){
+         return false;
+      }
+   }
+
+   for(int i = 0; i < FU_FP_SIZE; i++){
+      if(fuFP[i] != NULL){
+         return false;
+      }
    }
 
    return true; //ECE552: you can change this as needed; we've added this so the code provided to you compiles
