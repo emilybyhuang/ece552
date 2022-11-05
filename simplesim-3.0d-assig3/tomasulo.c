@@ -224,7 +224,7 @@ static bool is_simulation_done(counter_t sim_insn) {
 
 int getOldestRsToBroadcast(instruction_t *rsTable[], int rsTableSize, int current_cycle){
    int oldest_cycle = current_cycle;
-   int rsIndex = -1;
+   int rsIndex = INT_MAX;
    printReservationTable(current_cycle);
    for(int i = 0; i < rsTableSize; i++){
       // not in use
@@ -245,13 +245,17 @@ int getOldestRsToBroadcast(instruction_t *rsTable[], int rsTableSize, int curren
          printf("\n\nCycle done is %d for instr index: %d\n", cycle_done, rsTable[i] -> index);
 
          // if already done executing
-         if(cycle_done < oldest_cycle){
-            oldest_cycle = cycle_done;
-            rsIndex = i;
+         if(cycle_done < current_cycle){
+            if(rsIndex == INT_MAX)
+               rsIndex = i;
+            if(rsIndex != INT_MAX && rsTable[i] -> index < rsTable[rsIndex] -> index) 
+               rsIndex = i;
+            //printf("\n!!!!!!!!!!Availble to cdb instr index: %d\n", rsTable[rsIndex] -> index);
          }  
       }
    }
-   return rsIndex;
+   // return the older instruction in program
+   return (rsIndex == INT_MAX) ? -1 : rsIndex;
 }
 
 instruction_t *getOlder(instruction_t *a, instruction_t *b){
@@ -259,7 +263,7 @@ instruction_t *getOlder(instruction_t *a, instruction_t *b){
       return b;
    if(!b)
       return a;
-   if(a -> tom_execute_cycle < b -> tom_execute_cycle)
+   if(a -> index < b -> index)
       return a;
    else
       return b;
@@ -343,7 +347,7 @@ void CDB_To_retire(int current_cycle) {
 }
 
 bool operandsReady(instruction_t *entry,int current_cycle){
-   printf("Checking instr: %d @ cycle %d to see if operands ready\n", entry -> index, current_cycle);
+   //printf("Checking instr: %d @ cycle %d to see if operands ready\n", entry -> index, current_cycle);
    for(int i = 0; i < NUM_INPUT_REGS; i++){
       // waiting for an instruction
       if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL){
@@ -356,14 +360,15 @@ bool operandsReady(instruction_t *entry,int current_cycle){
 
 // get oldest that has been issued and operands ready
 instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, int current_cycle){
-   printf("\n\nTTTrying to find something to execute at cycle: %d\n", current_cycle);
+   //printf("\n\nTTTrying to find something to execute at cycle: %d\n", current_cycle);
+   int instrIndex = INT_MAX;
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL;
    for(int i = 0; i < rsTableSize; i++){
       if(rsTable[i] == NULL)
          continue;
 
-      printf("IIIIInstr %d in reservation table\n", rsTable[i] -> index);
+      //printf("IIIIInstr %d in reservation table\n", rsTable[i] -> index);
 
       // already has something that's executing
 	   if(rsTable[i] -> tom_execute_cycle != -1)
@@ -375,12 +380,16 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
         
       }
       // if all operands ready and dispatch cycle is before current cycle: candidate for issue
-      if(rsTable[i] -> tom_issue_cycle != -1 && rsTable[i] -> tom_issue_cycle < oldest_cycle && operandsReady(rsTable[i], current_cycle)){
-         oldest_cycle = rsTable[i] -> tom_issue_cycle;
-         oldestRSEntry = rsTable[i];
+      if(rsTable[i] -> tom_issue_cycle != -1 && operandsReady(rsTable[i], current_cycle)){
+         if(rsTable[i] -> index < instrIndex){
+            oldestRSEntry = rsTable[i];
+            instrIndex = rsTable[i] -> index;
+         }
+         
       }  
    }
-   return oldestRSEntry;
+   
+   return (instrIndex == INT_MAX)? NULL:oldestRSEntry;
 }
 
 void freeFuRSForStoreDone(int current_cycle){
@@ -535,9 +544,8 @@ void issue_To_execute(int current_cycle) {
          fuFP[0] = reservFpEntryToExecute;
       }
    }
-   printf("++++leaving execute now:\n");
-   printReservationTable(current_cycle);
-      
+   //printf("++++leaving execute now:\n");
+   //printReservationTable(current_cycle); 
 }
 
 int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
@@ -817,11 +825,13 @@ counter_t runTomasulo(instruction_trace_t* trace)
 
      if (is_simulation_done(sim_num_insn))
         break;
-     if (cycle == 100){
-        print_all_instr(trace, sim_num_insn);
-        break;
-     }
+   //   if (cycle == 100){
+   //      print_all_instr(trace, sim_num_insn);
+   //      print_all_instr_csv
+   //      break;
+   //   }
   }
   //print_all_instr(trace, sim_num_insn);
+  print_all_instr_csv(trace, sim_num_insn);
   return cycle;
 }

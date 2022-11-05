@@ -38,7 +38,7 @@ typedef struct my_instruction_list
 
 //prints all the instructions inside the given trace
 extern void print_all_instr(instruction_trace_t* table, int sim_num_insn);
-
+extern void print_all_instr_csv(instruction_trace_t* trace, int sim_num_insn);
 //inserts the instruction into the trace
 extern void put_instr(instruction_trace_t* trace, instruction_t* instr);
 
