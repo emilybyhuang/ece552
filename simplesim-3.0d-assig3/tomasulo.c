@@ -311,12 +311,11 @@ void CDB_To_retire(int current_cycle) {
   // free it's rs entry here as well
    printf("\n\n\nEnterrring retire\n");
    printFU(current_cycle);
+   printReservationTable(current_cycle);
 
    // that means there's nothing to retire
    if(!commonDataBus)
       return;
-
-
 
    setRSTagsToNull(commonDataBus);
 
@@ -333,8 +332,9 @@ void CDB_To_retire(int current_cycle) {
 
    // update map table s.t. the output reg is now null
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
-      if(commonDataBus -> r_out[i] != DNA)
+      if(commonDataBus -> r_out[i] != DNA && map_table[commonDataBus -> r_out[i]] == commonDataBus){
          map_table[commonDataBus -> r_out[i]] = NULL;
+      }
    }
 
    // printFU(current_cycle);
@@ -394,7 +394,6 @@ void freeFuRSForStoreDone(int current_cycle){
             printf("Done store @ cycle: %d for instr index: %d\n", current_cycle,fuINT[i] -> index);
             fuINT[i] -> tom_cdb_cycle = 0;
             
-
             // free rs for this entry
             for(int j = 0; j < RESERV_INT_SIZE; j++){
                if(reservINT[j] && reservINT[j] -> index == fuINT[i] -> index)
@@ -422,6 +421,7 @@ void execute_To_CDB(int current_cycle) {
   /* ECE552: YOUR CODE GOES HERE */
    printf("\n\n\nEnterring CDB\n");
    freeFuRSForStoreDone(current_cycle);
+   printReservationTable(current_cycle);
    printFU(current_cycle);
 
    instruction_t *reservEntryToBroadCast = NULL;
@@ -525,14 +525,9 @@ void issue_To_execute(int current_cycle) {
          fuFP[0] = reservFpEntryToExecute;
       }
    }
-
-   
+   printf("++++leaving execute now:\n");
    printReservationTable(current_cycle);
-  
-   
-   
-   printFU(current_cycle);
-   printf("Exiting execute\n\n\n");
+      
 }
 
 int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
@@ -561,6 +556,8 @@ int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
 void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
+   printf("\n\nEnterring dispatch\n");
+   
    bool success = false;
    // can't dispatch
    if(IFQ -> head == NULL){
@@ -580,6 +577,7 @@ void dispatch_To_issue(int current_cycle) {
       currInstr -> tom_execute_cycle = 0;
       currInstr -> tom_cdb_cycle = 0;
       queuePop(IFQ);
+      printReservationTable(current_cycle);
       return;
    }else if (USES_INT_FU(currOp)) {
       //INT
@@ -621,6 +619,7 @@ void dispatch_To_issue(int current_cycle) {
       currInstr->tom_issue_cycle = current_cycle;
       queuePop(IFQ);
    }
+   printReservationTable(current_cycle);
    // case where no instruction in instruction queue: can't dispatch
 }
 
@@ -639,6 +638,10 @@ void fetch(instruction_trace_t* trace) {
   
    /* ECE552: YOUR CODE GOES HERE */
   
+}
+
+void printMapTableForReg(int current_cycle, instruction_t *reg){
+   printf("At cycle: %d map table for reg: %d");
 }
 
 /*
@@ -716,8 +719,16 @@ void fetch_To_dispatch(instruction_trace_t* trace, int current_cycle) {
 void printReservationTable(int current_cycle){
    printf("-----printing rs tables at cycle: %d----\n", current_cycle);
    for(int i = 0; i < RESERV_INT_SIZE; i++){
-      if(reservINT[i] != NULL)
+      if(reservINT[i] != NULL){
          printf("reservINT index: %d, instr index in it: %d\n", i, reservINT[i] -> index);
+         // for(int j = 0; j < NUM_INPUT_REGS; j++){
+         //    if(reservINT[i] -> Q[j] == NULL){
+         //       printf("Q[%d] == NULL\n", j);
+         //    }else{
+         //       printf("Q[%d] points to instr %d\n", reservINT[i] -> Q[j] -> index);
+         //    }
+         // }
+      }
    }
 
    for(int i = 0; i < RESERV_FP_SIZE; i++){
