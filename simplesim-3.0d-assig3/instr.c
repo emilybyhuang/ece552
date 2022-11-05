@@ -50,7 +50,7 @@ void print_all_instr(instruction_trace_t* trace, int sim_num_insn) {
 //prints all the instructions inside the given trace for pipeline
 void print_all_instr_csv(instruction_trace_t* trace, int sim_num_insn) {
   FILE *fpt;
-  fpt = fopen("myoutput.csv", "w+");
+  fpt = fopen("output.csv", "w+");
 
   fprintf(fpt, "%s\t%s\t%s\t%s\t%s\n","index", "dispatch", "issue", "execute", "cdb");
    //....
