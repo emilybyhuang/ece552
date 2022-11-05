@@ -360,7 +360,6 @@ instruction_t *getOldestRsToExecute(instruction_t *rsTable[], int rsTableSize, i
    int oldest_cycle = current_cycle;
    instruction_t *oldestRSEntry = NULL;
    for(int i = 0; i < rsTableSize; i++){
-      printf("ni tm zai ganshenme: %d\n", i);
       if(rsTable[i] == NULL)
          continue;
 
@@ -392,6 +391,7 @@ void freeFuRSForStoreDone(int current_cycle){
          
          int cycle_done = fuINT[i]  -> tom_execute_cycle + latency - 1;
          if(cycle_done < current_cycle){
+            printf("Done store @ cycle: %d for instr index: %d\n", current_cycle,fuINT[i] -> index);
             fuINT[i] -> tom_cdb_cycle = 0;
             
 
@@ -420,8 +420,9 @@ void freeFuRSForStoreDone(int current_cycle){
 void execute_To_CDB(int current_cycle) {
 
   /* ECE552: YOUR CODE GOES HERE */
-  
+   printf("\n\n\nEnterring CDB\n");
    freeFuRSForStoreDone(current_cycle);
+   printFU(current_cycle);
 
    instruction_t *reservEntryToBroadCast = NULL;
 
@@ -442,9 +443,7 @@ void execute_To_CDB(int current_cycle) {
    if(reservEntryToBroadCast && reservEntryToBroadCast -> tom_cdb_cycle == -1){
       commonDataBus = reservEntryToBroadCast;
       reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
-      
-      // commonDataBus = reservEntryToBroadCast;
-      // reservEntryToBroadCast -> tom_cdb_cycle = current_cycle;
+      printf("puting instr index: %d on cdb\n", reservEntryToBroadCast -> index);
       // setRSTagsToNull(commonDataBus);
 
       // go through reservation station and find the matching one on CDB to clear
@@ -492,6 +491,7 @@ void issue_To_execute(int current_cycle) {
    /* ECE552: YOUR CODE GOES HERE */
    printf("\n\n\nEnterring execute:\n");
    printReservationTable(current_cycle);
+   printFU(current_cycle);
    
    // because there's 3 fuINT: can execute at most 3
    for(int i = 0; i < FU_INT_SIZE; i++){
@@ -796,7 +796,7 @@ counter_t runTomasulo(instruction_trace_t* trace)
 
      if (is_simulation_done(sim_num_insn))
         break;
-     if (cycle == 100){
+     if (cycle == 50){
         print_all_instr(trace, sim_num_insn);
         break;
      }
