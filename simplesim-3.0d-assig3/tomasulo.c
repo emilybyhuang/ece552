@@ -193,7 +193,7 @@ instruction_t *getFuAvail(instruction_t *fu[], int numFU){
 Description:
    Update the output reg in map table with it's corresponding instruction
 */
-void update_maptable(instruction_t* currInstr){
+void updateMaptable(instruction_t* currInstr){
    for(int i = 0; i < NUM_OUTPUT_REGS; i++){
       if(currInstr -> r_out[i] != DNA)
          map_table[currInstr -> r_out[i]] = currInstr;
@@ -240,10 +240,10 @@ int getFreeReservationEntry(instruction_t *reservationStationTable[], int size){
 /*
 Description:
    Update the input reg in reservatin station with
-   1. corrresponding tag(instr) if not ready
+   1. corresponding tag(instr) if not ready
    2. NULL if ready
 */ 
-void update_rs_entry(instruction_t* currInstr){
+void updateRSEntry(instruction_t* currInstr){
    for(int i = 0; i < NUM_INPUT_REGS; i++){
       // NOTE: map_table[currInstr -> r_in[i]] might be NULL
       // if NULL: that means it's ready for issue
@@ -448,7 +448,7 @@ void CDB_To_retire(int current_cycle) {
 }
 
 // Checks if the Q for a RS entry is NULL
-bool operandsReady(instruction_t *entry,int current_cycle){
+bool operandsReady(instruction_t *entry, int current_cycle){
    for(int i = 0; i < NUM_INPUT_REGS; i++){
       if(entry -> r_in[i] != DNA && entry -> Q[i] != NULL){
          // printf("Operand index: %d not ready\n\n", i);
