@@ -607,7 +607,6 @@ void dispatch_To_issue(int current_cycle) {
 
    /* ECE552: YOUR CODE GOES HERE */
    // printf("\n\nEnterring issue\n");
-   
    // printReservationTable(current_cycle);
    // printFU(current_cycle);
 
