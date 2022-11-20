@@ -597,12 +597,11 @@ void stride_prefetcher(struct cache_t *cp, md_addr_t addr) {
   // matching: update stride, rpt_entry_state 
   }else{
     if(cp -> rpt_table[rpt_table_index].not_used){
-      cp -> rpt_table[rpt_table_index].prev_addr = addr;
       cp -> rpt_table[rpt_table_index].not_used = false;
-    }else{
-      int new_stride = addr - cp -> rpt_table[rpt_table_index].prev_addr;
-      update_rpt_table(&(cp -> rpt_table[rpt_table_index]), new_stride);
     }
+    int new_stride = addr - cp -> rpt_table[rpt_table_index].prev_addr;
+    update_rpt_table(&(cp -> rpt_table[rpt_table_index]), new_stride);
+    cp -> rpt_table[rpt_table_index].prev_addr = addr;
   }
   md_addr_t next_addr = addr + cp -> rpt_table[rpt_table_index].stride;
   if(cp -> rpt_table[rpt_table_index].rpt_entry_state != NO_PRED){
