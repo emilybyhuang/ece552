@@ -606,7 +606,7 @@ void stride_prefetcher(struct cache_t *cp, md_addr_t addr) {
   }
   md_addr_t next_addr = addr + cp -> rpt_table[rpt_table_index].stride;
   if(cp -> rpt_table[rpt_table_index].rpt_entry_state != NO_PRED){
-    if(cache_probe(cp, next_addr)){
+    if(cache_probe(cp, next_addr) == 0){
       next_addr = CACHE_BADDR(cp, next_addr);
       cache_access(cp, Read, next_addr, NULL, cp->bsize, 0, NULL, NULL, 1);
     }
