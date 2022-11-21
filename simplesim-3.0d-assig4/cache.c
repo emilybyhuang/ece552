@@ -139,6 +139,10 @@
 /* bound sqword_t/dfloat_t to positive int */
 #define BOUND_POS(N)		((int)(MIN(MAX(0, (N)), 2147483647)))
 
+/* ECE552 Assignment 4 - START CODE*/
+#define NUM_RPT_ENTRIES_OPEN_END 64
+/* ECE552 Assignment 4 - END CODE*/
+
 /* unlink BLK from the hash table bucket chain in SET */
 static void
 unlink_htab_ent(struct cache_t *cp,		/* cache to update */
@@ -361,7 +365,7 @@ cache_create(char *name,		/* name of the cache */
 
 
   /* ECE552 Assignment 4 - START CODE*/
-  if(cp -> prefetch_type >= 2){
+  if(cp -> prefetch_type > 2){
     cp -> rpt_table = malloc(cp -> prefetch_type * sizeof(rpt_table_entry));
     // init rpt entry
     for(int i = 0; i < cp -> prefetch_type; ++i){
@@ -370,6 +374,20 @@ cache_create(char *name,		/* name of the cache */
       cp -> rpt_table[i].stride = 0;
       cp -> rpt_table[i].rpt_entry_state = INIT;
       cp -> rpt_table[i].not_used = true;
+    }
+  }
+
+  if(cp -> prefetch_type == 2){
+    cp -> rpt_open_end_table = malloc(NUM_RPT_ENTRIES_OPEN_END * sizeof(rpt_open_end_entry));
+    if(cp -> rpt_open_end_table == NULL){
+      printf("Open end table out of memory\n");
+    }
+    for(int i = 0; i < NUM_RPT_ENTRIES_OPEN_END; ++i){
+      cp -> rpt_open_end_table[i].tag = 0;
+      cp -> rpt_open_end_table[i].prev_addr = 0;
+      cp -> rpt_open_end_table[i].stride = 0;
+      cp -> rpt_open_end_table[i].rpt_entry_state = INIT;
+      cp -> rpt_open_end_table[i].not_used = true;
     }
   }
   /* ECE552 Assignment 4 - END CODE*/
@@ -538,11 +556,6 @@ void next_line_prefetcher(struct cache_t *cp, md_addr_t addr) {
   }
 }
 
-/* Open Ended Prefetcher */
-void open_ended_prefetcher(struct cache_t *cp, md_addr_t addr) {
-	; 
-}
-
 void update_rpt_table(rpt_table_entry *rpt_entry, int new_stride){
   bool stride_condition = new_stride == rpt_entry -> stride;
   switch(rpt_entry -> rpt_entry_state){
@@ -577,6 +590,99 @@ void update_rpt_table(rpt_table_entry *rpt_entry, int new_stride){
         rpt_entry -> stride = new_stride;
       }
       break;
+  }
+}
+
+void update_rpt_open_end_table(rpt_open_end_entry *rpt_entry, int new_stride){
+  bool stride_condition = new_stride == rpt_entry -> stride;
+  switch(rpt_entry -> rpt_entry_state){
+    case OE_INIT:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_PRE_STEADY;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_TRANSIENT;
+        rpt_entry -> stride = new_stride;
+      }
+      break;
+    case OE_PRE_STEADY:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_STEADY;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_INIT;
+        rpt_entry -> stride = new_stride;
+      }
+      break;
+    case OE_STEADY:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_STEADY;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_PRE_STEADY;
+      }
+      break;
+    case OE_TRANSIENT:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_PRE_STEADY;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_NOT_STEADY;
+        rpt_entry -> stride = new_stride;
+      }
+      break;
+    case OE_NOT_STEADY:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_TRANSIENT;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_NO_PRED;
+        rpt_entry -> stride = new_stride;
+      }
+      break;
+    case OE_NO_PRED:
+      if(stride_condition){
+        rpt_entry -> rpt_entry_state = OE_NOT_STEADY;
+      }else{
+        rpt_entry -> rpt_entry_state = OE_NO_PRED;
+        rpt_entry -> stride = new_stride;
+      }
+      break;
+  }
+}
+
+/* Open Ended Prefetcher */
+void open_ended_prefetcher(struct cache_t *cp, md_addr_t addr) {
+	md_addr_t pc = get_PC();
+  
+  int rpt_table_index = (pc >> 3) % NUM_RPT_ENTRIES_OPEN_END; 
+  // if(rpt_table_index < 64 && rpt_table_index >= 0){
+  //   ;
+  // } else {
+  //   printf("rpt_open_end_index: %d\n", rpt_table_index);
+  // }
+  // printf("current rpt table index is %d\n", rpt_table_index);
+  // if(cp -> rpt_open_end_table[rpt_table_index].tag){
+  //   printf("Entry found\n");
+  // }
+  // tag not matching: update entry
+  if(cp -> rpt_open_end_table[rpt_table_index].tag != pc){
+    cp -> rpt_open_end_table[rpt_table_index].tag = pc;
+    cp -> rpt_open_end_table[rpt_table_index].prev_addr = addr;
+    cp -> rpt_open_end_table[rpt_table_index].stride = 0;
+    cp -> rpt_open_end_table[rpt_table_index].rpt_entry_state = INIT;
+    cp -> rpt_open_end_table[rpt_table_index].not_used = false;
+  // matching: update stride, rpt_entry_state 
+  }else{
+    if(cp -> rpt_open_end_table[rpt_table_index].not_used){
+      cp -> rpt_open_end_table[rpt_table_index].not_used = false;
+    }
+    int new_stride = addr - cp -> rpt_open_end_table[rpt_table_index].prev_addr;
+    update_rpt_open_end_table(&(cp -> rpt_open_end_table[rpt_table_index]), new_stride);
+    cp -> rpt_open_end_table[rpt_table_index].prev_addr = addr;
+  }
+  md_addr_t next_addr = addr + cp -> rpt_open_end_table[rpt_table_index].stride;
+  if(cp -> rpt_open_end_table[rpt_table_index].rpt_entry_state == OE_PRE_STEADY
+    || cp -> rpt_open_end_table[rpt_table_index].rpt_entry_state == OE_STEADY){
+    if(cache_probe(cp, next_addr) == 0){
+      next_addr = CACHE_BADDR(cp, next_addr);
+      cache_access(cp, Read, next_addr, NULL, cp->bsize, 0, NULL, NULL, 1);
+    }
   }
 }
 

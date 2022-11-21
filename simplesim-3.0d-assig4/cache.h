@@ -154,6 +154,15 @@ typedef enum rpt_state{
   NO_PRED
 } RPT_STATE;
 
+typedef enum rpt_open_end_state{
+  OE_INIT,
+  OE_PRE_STEADY,
+  OE_STEADY,
+  OE_TRANSIENT,
+  OE_NOT_STEADY,
+  OE_NO_PRED
+} RPT_OPEN_END_STATE;
+
 typedef struct rpt_entry_t{
   md_addr_t tag;
   md_addr_t prev_addr;
@@ -161,6 +170,14 @@ typedef struct rpt_entry_t{
   RPT_STATE rpt_entry_state;
   bool not_used;
 } rpt_table_entry;
+
+typedef struct rpt_open_end_entry_t{
+  md_addr_t tag;
+  md_addr_t prev_addr;
+  int stride;
+  RPT_OPEN_END_STATE rpt_entry_state;
+  bool not_used;
+} rpt_open_end_entry;
 
 /* cache definition */
 struct cache_t
@@ -178,6 +195,7 @@ struct cache_t
 
   /* ECE552 Assignment 4 - START CODE*/
   rpt_table_entry * rpt_table; 
+  rpt_table_entry * rpt_open_end_table;
   /* ECE552 Assignment 4 - END CODE*/
 
   /* miss/replacement handler, read/write BSIZE bytes starting at BADDR
