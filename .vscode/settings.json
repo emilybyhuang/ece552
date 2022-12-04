@@ -50,6 +50,7 @@
         "list": "cpp",
         "unordered_set": "cpp",
         "forward_list": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.def": "c"
     }
 }
