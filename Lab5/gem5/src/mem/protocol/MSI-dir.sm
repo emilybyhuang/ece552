@@ -41,13 +41,31 @@ machine(Directory, "Directory protocol")
     I, AccessPermission:Invalid, desc="Not Present/Invalid";
     M, AccessPermission:Read_Write, desc="Modified";
 
-    /* ECE552: Complete this section here */
+    /* ECE552: BEGIN CODE */
+
+    S, AccessPermission:Read_Only, desc="Shared";
 
     //========================
     //ECE552: Transient States
     //========================
 
     /* ECE552: Complete this section here */
+
+    IS_D, AccessPermission:Busy, desc="Transitioning from Invalid to Shared, waiting on data from memory";
+    IM_D, AccessPermission:Busy, desc="Transitioning from Invalid to Modified, waiting on data from memory";
+
+    SI_
+
+    SM_
+
+    // Originally modified cache block is replaced
+    MS_D, AccessPermission:Busy, desc="Transitioning from Modified to Shared, waiting on data";
+    
+    MI_A, AccessPermission:Busy, desc="Transitioning from Modified to Invalid, waiting on ack from memory";
+    MS_A, AccessPermission:Busy, desc="Transitioning from MS_D to Shared, waiting on ack from memory";
+
+
+    /* ECE552: END CODE */
   }
 
   // =============================================================================
