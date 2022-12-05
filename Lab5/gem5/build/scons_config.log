@@ -1,0 +1,177 @@
+file /nfs/ug/homes-1/h/huangba9/ece552/Lab5/gem5/SConstruct,line 653:
+	Configure(confdir = build/.scons_config)
+scons: Configure: Checking for leading underscore in global variables...
+build/.scons_config/conftest_0.c <-
+  |
+  |        asm(".globl _x; _x: .byte 0");
+  |        extern int x;
+  |        int main() { return x; }
+  |        
+(B[m [      CC] [33m.scons_config/conftest_0[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_0(B[m
+/usr/bin/ld: build/.scons_config/conftest_0.o: warning: relocation against `x' in read-only section `.text'
+/usr/bin/ld: build/.scons_config/conftest_0.o: in function `main':
+conftest_0.c:(.text+0x7): undefined reference to `x'
+/usr/bin/ld: warning: creating DT_TEXTREL in a PIE
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+scons: Configure: Checking for C header file Python.h... 
+build/.scons_config/conftest_1.c <-
+  |
+  |#include <Python.h>
+  |
+  |
+(B[m [      CC] [33m.scons_config/conftest_1[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library pthread... 
+build/.scons_config/conftest_2.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_2[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_2(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library dl... 
+build/.scons_config/conftest_3.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_3[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_3(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library util... 
+build/.scons_config/conftest_4.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_4[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_4(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library m... 
+build/.scons_config/conftest_5.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_5[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_5(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library python2.7... 
+build/.scons_config/conftest_6.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_6[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_6(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for accept(0,0,0) in C++ library None... 
+build/.scons_config/conftest_7.cpp <-
+  |
+  |
+  |#include "sys/socket.h"
+  |
+  |int
+  |main() {
+  |  accept(0,0,0);
+  |return 0;
+  |}
+  |
+(B[m [     CXX] [33m.scons_config/conftest_7[33m[1m.cpp[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_7(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for zlibVersion() in C++ library z... 
+build/.scons_config/conftest_8.cpp <-
+  |
+  |
+  |#include "zlib.h"
+  |
+  |int
+  |main() {
+  |  zlibVersion();
+  |return 0;
+  |}
+  |
+(B[m [     CXX] [33m.scons_config/conftest_8[33m[1m.cpp[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_8(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for clock_nanosleep(0,0,NULL,NULL) in C library None... 
+build/.scons_config/conftest_9.c <-
+  |
+  |
+  |#include "time.h"
+  |
+  |int
+  |main() {
+  |  clock_nanosleep(0,0,NULL,NULL);
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_9[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_9(B[m
+scons: Configure: yes
+
+scons: Configure: Checking for C library tcmalloc_minimal... 
+build/.scons_config/conftest_10.c <-
+  |
+  |
+  |
+  |int
+  |main() {
+  |  
+  |return 0;
+  |}
+  |
+(B[m [      CC] [33m.scons_config/conftest_10[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+(B[m [    LINK] [33m[33m[1m[34m[1m -> [33m[1m.scons_config/conftest_10(B[m
+/usr/bin/ld: cannot find -ltcmalloc_minimal
+collect2: error: ld returned 1 exit status
+scons: Configure: no
+
+scons: Configure: Checking for C header file fenv.h... 
+build/.scons_config/conftest_11.c <-
+  |
+  |#include <fenv.h>
+  |
+  |
+(B[m [      CC] [33m.scons_config/conftest_11[33m[1m.c[34m[1m -> [33m[1m.o(B[m
+scons: Configure: yes
+
+
