@@ -651,7 +651,7 @@ machine(L1Cache, "MSI L1 Cache")
   }  
 
   // Starts at IM_AD state
-  transition(IM_AD, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}, IM_AD) {
+  transition({IM_AD, IM_A}, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}) {
     z_stall;
   }
 
@@ -687,10 +687,6 @@ machine(L1Cache, "MSI L1 Cache")
     sx_store_hit;
     w_deallocateTBE;
     n_popResponseQueue;
-  }
-  
-  transition(IM_A, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}, IM_A) {
-    z_stall;
   }
 
   // Starts at S state
