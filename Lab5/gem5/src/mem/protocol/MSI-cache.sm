@@ -623,25 +623,23 @@ machine(L1Cache, "MSI L1 Cache")
   
   // Starts at I state so will profileMiss, allocate cache block
   transition(I, {Load, Ifetch}, IS_D){
-    v_allocateTBE;
     p_profileMiss;
+    v_allocateTBE;
     i_allocateL1CacheBlock;
     as_issueGetS;
     m_popMandatoryQueue;
   }
   
   transition(I, Store, IM_AD){
-    v_allocateTBE;
     p_profileMiss;
+    v_allocateTBE;
     i_allocateL1CacheBlock;
     am_issueGetM;
     m_popMandatoryQueue;
   }
 
   // Starts at IS state
-  
-  // ld, str, replacement, inv, ifetch? stall
-  transition(IS_D, {Load, Store, Replacement, Inv, Ifetch}) {
+  transition(IS_D, {Load, Store, Replacement, Inv, Ifetch}, IS_D) {
     z_stall;
   }
 
@@ -653,7 +651,7 @@ machine(L1Cache, "MSI L1 Cache")
   }  
 
   // Starts at IM_AD state
-  transition({IM_AD, IM_A}, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}) {
+  transition(IM_AD, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}, IM_AD) {
     z_stall;
   }
 
@@ -666,8 +664,7 @@ machine(L1Cache, "MSI L1 Cache")
 
   transition(IM_AD, Data_from_Dir_Ack_Cnt, IM_A){
     u_writeDataToCache;
-    // TODO(emily): Do we need to updateAckCount?
-    // q_updateAckCount;
+    q_updateAckCount;
     n_popResponseQueue;
   }
 
@@ -691,19 +688,16 @@ machine(L1Cache, "MSI L1 Cache")
     w_deallocateTBE;
     n_popResponseQueue;
   }
-
-  // Starts at S state
-  transition(S, {Load,Ifetch}){
-    r_load_hit;
-    m_popMandatoryQueue;
+  
+  transition(IM_A, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}, IM_A) {
+    z_stall;
   }
 
-
+  // Starts at S state
   transition(S, Store, SM_AD){
-    v_allocateTBE;
     p_profileMiss;
+    v_allocateTBE;
     am_issueGetM;
-    x_copyDataFromCacheToTBE;
     m_popMandatoryQueue;
   }
 
@@ -720,13 +714,13 @@ machine(L1Cache, "MSI L1 Cache")
     o_popForwardedRequestQueue;
   }
 
-  // Start at SM_AD
-  transition(SM_AD, {Load, Ifetch}){
-    r_load_hit;
+  transition({S, SM_AD, SM_A, M}, {Load, Ifetch}){
+    r_load_hit; // Read hit
     m_popMandatoryQueue;
   }
 
-  transition(SM_AD, {Store, Replacement, Fwd_GetS, Fwd_GetM}){
+  // Start at SM_AD
+  transition(SM_AD, {Store, Replacement, Fwd_GetS, Fwd_GetM}, SM_AD){
     z_stall;
   }
 
@@ -735,7 +729,7 @@ machine(L1Cache, "MSI L1 Cache")
     o_popForwardedRequestQueue;
   }
 
-  transition(SM_A, Data_from_Dir_No_Acks, M){
+  transition(SM_AD, Data_from_Dir_No_Acks, M){
     u_writeDataToCache;
     sx_store_hit;
     w_deallocateTBE;
@@ -749,13 +743,12 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   // Start at SM_A
-
-  transition(SM_A, {Store, Replacement, Fwd_GetS, Fwd_GetM}){
+  transition(SM_A, {Store, Replacement, Fwd_GetS, Fwd_GetM}, SM_A){
     z_stall;
   }
 
   // Start at M state 
-  transition(M, Store){
+  transition(M, Store, M){
     s_store_hit;
     m_popMandatoryQueue;
   }
@@ -767,8 +760,8 @@ machine(L1Cache, "MSI L1 Cache")
   }
   
   transition(M, Fwd_GetS, S){
-    de_sendDataFromCacheToDir;
     e_sendDataFromCacheToRequestor;
+    de_sendDataFromCacheToDir;
     o_popForwardedRequestQueue;
   }
 
@@ -780,13 +773,13 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   // Start at MI_A
-  transition({MI_A, SI_A, II_A}, {Ifetch, Load, Store, Replacemement}){
+  transition({MI_A, SI_A, II_A}, {Ifetch, Load, Store, Replacement}){
     z_stall;
   }
 
   transition(MI_A, Fwd_GetS, SI_A){
     dee_sendDataFromTBEToDir;
-    e_sendDataFromCacheToRequestor;
+    ee_sendDataFromTBEToRequestor;
     o_popForwardedRequestQueue;
   }
   
