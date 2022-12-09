@@ -561,6 +561,11 @@ getDirectoryEntry(address).Sharers);
     i_popIncomingRequestQueue;
   }
 
+  transition(I, {PUTM_NotOwner, PUTS_NotLast, PUTS_Last}) {
+    a_sendWriteBackAck;
+    i_popIncomingRequestQueue;
+  }
+
   // Start at IS_D
   transition(IS_D, Memory_Data, S){
     d_sendData;
@@ -573,13 +578,13 @@ getDirectoryEntry(address).Sharers);
   }
 
   // Start at IM_D
-  transition(IM_MD, Memory_Data, M) {
+  transition(IM_D, Memory_Data, M) {
     d_sendData;
     w_deallocateTBE;
     qm_popMemQueue;
   }
 
-  transition(IM_MD, {GETM, GETS, PUTS_NotLast, PUTS_Last, PUTM_NotOwner, PUTM_Owner}) {
+  transition(IM_D, {GETM, GETS, PUTS_NotLast, PUTS_Last, PUTM_NotOwner, PUTM_Owner}) {
     z_stall;
   }
 
@@ -605,7 +610,8 @@ getDirectoryEntry(address).Sharers);
   }
 
   transition(S, PUTS_Last, I){
-    kk_removeRequestSharer;
+    // I should not have any sharers
+    cs_clearSharers;
     a_sendWriteBackAck;
     i_popIncomingRequestQueue;
   }

@@ -643,7 +643,7 @@ machine(L1Cache, "MSI L1 Cache")
     z_stall;
   }
 
-  transition(IS_D, {Data_from_Dqir_No_Acks, Data_from_Owner}, S){
+  transition(IS_D, {Data_from_Dir_No_Acks, Data_from_Owner}, S){
     u_writeDataToCache;
     rx_load_hit;
     w_deallocateTBE;
@@ -651,7 +651,7 @@ machine(L1Cache, "MSI L1 Cache")
   }  
 
   // Starts at IM_AD state
-  transition({IM_AD, IM_A}, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}) {
+  transition({IM_AD, IM_A}, {Load, Store, Replacement, Fwd_GetS, Fwd_GetM, Ifetch}){
     z_stall;
   }
 
@@ -670,9 +670,8 @@ machine(L1Cache, "MSI L1 Cache")
 
   transition(IM_AD, Data_from_Dir_Ack_Cnt_Last, M){
     u_writeDataToCache;
-    q_updateAckCount;
-    sx_store_hit;
     w_deallocateTBE;
+    sx_store_hit;
     n_popResponseQueue;
   }
 
@@ -682,7 +681,7 @@ machine(L1Cache, "MSI L1 Cache")
   }
 
   // Start at IM_A state
-  transition({IM_A, SM_A}, INV_Ack_all, M){
+  transition({IM_A, SM_A}, Inv_Ack_all, M){
     q_updateAckCount;
     sx_store_hit;
     w_deallocateTBE;
@@ -727,14 +726,22 @@ machine(L1Cache, "MSI L1 Cache")
 
   transition(SM_AD, Data_from_Dir_No_Acks, M){
     u_writeDataToCache;
-    sx_store_hit;
     w_deallocateTBE;
+    sx_store_hit;
     n_popResponseQueue;
   }
 
   transition(SM_AD, Data_from_Dir_Ack_Cnt, SM_A){
     u_writeDataToCache;
     q_updateAckCount;
+    n_popResponseQueue;
+  }
+
+  transition(SM_AD, Data_from_Dir_Ack_Cnt_Last, M) {
+    u_writeDataToCache;
+    q_updateAckCount; 
+    w_deallocateTBE;
+    sx_store_hit; // Store hit on latest loaded data
     n_popResponseQueue;
   }
 
